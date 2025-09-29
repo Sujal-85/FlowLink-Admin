@@ -7,6 +7,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Remove any unintended top gaps under sticky header */
+.app-main > *:first-child {
+  margin-top: 0 !important;
+}
+
+/* Ensure root containers don’t add extra top margins on mobile */
+@media (max-width: 768px) {
+  .app-main { padding-top: 0 !important; }
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

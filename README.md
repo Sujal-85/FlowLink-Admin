@@ -4,6 +4,37 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Available Scripts
 
+## Firebase Setup
+
+Create a Firebase project and enable:
+- Authentication: Email/Password, Google, Microsoft providers
+- Firestore Database
+- Storage
+
+Add environment variables in a `.env` file at the project root:
+
+```
+REACT_APP_FIREBASE_API_KEY=your_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
+REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+REACT_APP_FIREBASE_APP_ID=your_app_id
+```
+
+Key files:
+- `src/services/firebase.js`: initializes Auth, Firestore, Storage and providers
+- `src/services/auth.js`: wrappers for email, Google, Microsoft sign-in and logout
+- `src/services/db.js`: CRUD helpers for products, customers, profiles
+
+Features wired:
+- Login page supports email/password, Google, and Microsoft
+- Protected routes via `components/PrivateRoute.jsx`
+- Add Product uploads images to Storage and saves product to Firestore
+- Add Customer saves to Firestore
+- Settings page loads/saves profile to Firestore
+
+
 In the project directory, you can run:
 
 ### `npm start`

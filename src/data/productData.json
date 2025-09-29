@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "name": "India Gate Basmati Rice",
+    "pack": "5kg Pack",
+    "price": 480,
+    "image": "/assets/products/basmati-rice.jpeg",
+    "desc": "Premium basmati rice for daily cooking.",
+    "retailer": "Krishna General Store",
+    "delivery": "30 mins delivery",
+    "offers": ["10% cashback on first order", "Free delivery above ₹500"]
+  },
+  {
+    "id": 2,
+    "name": "Madhur Pure Sugar",
+    "pack": "1kg Pack",
+    "price": 45,
+    "image": "/assets/products/madhur-sugar.jpeg",
+    "desc": "Refined sugar with natural sweetness.",
+    "retailer": "SweetMart",
+    "delivery": "Same day delivery",
+    "offers": ["5% off on prepaid orders"]
+  },
+  {
+    "id": 3,
+    "name": "Fortune Sunflower Oil",
+    "pack": "1L Bottle",
+    "price": 165,
+    "image": "/assets/products/fortune-oil.jpeg",
+    "desc": "Light refined sunflower oil for healthy cooking.",
+    "retailer": "Grocery Hub",
+    "delivery": "45 mins delivery",
+    "offers": ["₹20 off per litre", "Free delivery above ₹400"]
+  },
+  {
+    "id": 4,
+    "name": "Maggi 2-Minute Noodles",
+    "pack": "12 Pack Bundle",
+    "price": 144,
+    "image": "/assets/products/maggi-12.jpeg",
+    "desc": "Delicious instant noodles loved by all ages.",
+    "retailer": "QuickMart",
+    "delivery": "Express delivery available",
+    "offers": ["Flat ₹10 off", "Buy 2 get 1 free"]
+  },
+  {
+    "id": 5,
+    "name": "Amul Fresh Milk",
+    "pack": "500ml Pouch",
+    "price": 28,
+    "image": "/assets/products/amul-milk.jpeg",
+    "desc": "Fresh toned milk from Amul dairy.",
+    "retailer": "Dairy Fresh",
+    "delivery": "Daily morning delivery",
+    "offers": ["Subscription discount available"]
+  },
+  {
+    "id": 6,
+    "name": "Fresh Eggs Tray",
+    "pack": "30 Pieces",
+    "price": 180,
+    "image": "/assets/products/fresheggs.jpeg",
+    "desc": "Farm fresh eggs, hygienically packed.",
+    "retailer": "FarmHouse Store",
+    "delivery": "Next day delivery",
+    "offers": ["₹15 off on first tray"]
+  },
+  {
+    "id": 7,
+    "name": "Tata Sampann Toor Dal",
+    "pack": "1 Kg",
+    "price": 154,
+    "image": "/assets/products/toor-dal.jpeg",
+    "desc": "Unpolished toor dal packed with protein.",
+    "retailer": "Healthy Choice",
+    "delivery": "1 hour delivery",
+    "offers": ["5% off on minimum order ₹500"]
+  },
+  {
+    "id": 8,
+    "name": "Gokul Besan",
+    "pack": "2 Kg",
+    "price": 77,
+    "image": "/assets/products/gokul-besan.jpeg",
+    "desc": "Finely ground besan for multiple recipes.",
+    "retailer": "Shree Grocery",
+    "delivery": "Fast delivery",
+    "offers": ["Save ₹5 per pack"]
+  }
+]

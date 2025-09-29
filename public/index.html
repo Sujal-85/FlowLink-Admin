@@ -24,7 +24,33 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>React App</title>
+    <title>FlowLink</title>
+
+    <!-- Tailwind CSS via CDN (no install) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Minimal Tailwind config to use our fonts and extend colors if needed
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              manrope: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+              mate: ["Mate", "ui-serif", "Georgia", "serif"],
+            },
+            colors: {
+              brand: {
+                green: "#3aa93f",
+                dark: "#1a1a1a",
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mate:ital@0;1&family=Manrope:wght@200..800&display=swap" rel="stylesheet">
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

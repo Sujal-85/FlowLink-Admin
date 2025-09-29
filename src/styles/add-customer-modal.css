@@ -1,0 +1,353 @@
+/* Add Customer Page Styles */
+.add-customer-page {
+  flex: 1;
+  padding: 24px;
+  background-color: #f5f6f7; /* page light gray */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-customer-content {
+  background-color: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.add-customer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  font-family: 'Manrope', sans-serif;
+}
+
+.breadcrumb-arrow {
+  color: #9ca3af;
+}
+
+.breadcrumb-text {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+/* Form Layout */
+.customer-form {
+  padding: 32px;
+}
+
+.form-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 48px;
+  margin-bottom: 32px;
+}
+
+.form-left,
+.form-right {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Form Sections */
+.form-section {
+  background-color: #ffffff; /* white card like screenshot */
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.section-title {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: 'Manrope', sans-serif;
+  margin: 0 0 16px 0;
+}
+
+.section-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  font-family: 'Manrope', sans-serif;
+  margin: 0 0 16px 0;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* Section footer strip (for the notice under marketing checkboxes) */
+.section-footer {
+  margin: 16px -24px -24px; /* stretch to card edges */
+  padding: 12px 24px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f3f4f6; /* subtle gray strip */
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-btn:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+/* Form Groups */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Manrope', sans-serif;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Manrope', sans-serif;
+  background-color: white;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3aa93f;
+  box-shadow: 0 0 0 3px rgba(58, 169, 63, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.field-note {
+  color: #6b7280;
+  font-size: 12px;
+  font-family: 'Manrope', sans-serif;
+  margin: 0;
+}
+
+/* Phone Input */
+.phone-input {
+  display: flex;
+  gap: 8px;
+}
+
+.country-select {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.phone-input input {
+  flex: 1;
+}
+
+/* Checkbox Groups */
+.checkbox-group {
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Manrope', sans-serif;
+  color: #374151;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Muted styling for disabled checkboxes and text, like the screenshot */
+.checkbox-label input[type="checkbox"][disabled] {
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+.checkbox-label input[type="checkbox"][disabled] + .checkmark,
+.checkbox-label input[type="checkbox"][disabled] ~ * {
+  opacity: 0.6;
+}
+
+.marketing-note {
+  color: #6b7280;
+  font-size: 12px;
+  font-family: 'Manrope', sans-serif;
+  margin: 16px 0 0 0;
+  line-height: 1.4;
+}
+
+/* Add Address Button */
+.add-address-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #374151;
+  font-size: 14px;
+  font-family: 'Manrope', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: fit-content;
+}
+
+.add-address-btn:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cancel-btn {
+  padding: 12px 24px;
+  background-color: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Manrope', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.save-btn {
+  padding: 12px 24px;
+  background-color: #3aa93f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Manrope', sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-btn:hover {
+  background-color: #2d8a32;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .form-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .add-customer-page {
+    padding: 16px;
+  }
+  
+  .add-customer-header {
+    padding: 16px 20px;
+  }
+  
+  .customer-form {
+    padding: 20px;
+  }
+  
+  .form-section {
+    padding: 16px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    width: 100%;
+  }
+}
