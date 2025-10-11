@@ -8,6 +8,7 @@ import {
   Clock,
   ChevronDown,
   Download,
+  Building2,
   Bell,
 } from 'lucide-react'
 import LayoutWrapper from '../components/LayoutWrapper'
@@ -191,9 +192,12 @@ const FinancesPage = () => {
         </Helmet>
 
         {/* Header: Title + Range + Export */}
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-[#303030] text-[28px] font-bold font-manrope m-0">Finances Overview</h1>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
+            <Building2 size={18} />
+            <h1 className="text-[#303030] text-[28px] font-bold font-manrope m-0">Finances Overview</h1>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
               <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm inline-flex items-center gap-2">
                 <Clock size={16} />
@@ -218,7 +222,7 @@ const FinancesPage = () => {
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <StatCard icon={IndianRupee} label="Total Revenue" amount={stats.revenue} color="#2563eb" />
           <StatCard icon={TrendingUp} label="Net Profit" amount={stats.profit} color="#0ea5e9" />
           <StatCard icon={Receipt} label="Expenses" amount={stats.expenses} color="#64748b" />
@@ -226,7 +230,7 @@ const FinancesPage = () => {
         </div>
 
         {/* Charts grid */}
-        <div className="grid grid-cols-[2fr_1fr] gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold text-[#303030]">Revenue vs Expenses</div>
@@ -242,7 +246,7 @@ const FinancesPage = () => {
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="text-sm font-semibold text-[#303030]">Category-wise Expenses</div>
             <DonutChart segments={donut} />
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {donut.map(d => (
                 <div key={d.label} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded" style={{ background: d.color }} />
@@ -256,9 +260,9 @@ const FinancesPage = () => {
 
         {/* Transactions */}
         <div className="bg-white rounded-xl shadow-sm p-5 mt-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
             <div className="text-sm font-semibold text-[#303030]">Transactions</div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <input
                 className="h-9 px-3 border border-gray-300 rounded-lg text-sm"
                 placeholder="Search by party"
@@ -275,7 +279,27 @@ const FinancesPage = () => {
               </select>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y">
+            {filteredRows.map((r, i) => (
+              <div key={i} className="py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-[#303030]">{r.party}</div>
+                    <div className="text-xs text-gray-500">{r.date}</div>
+                    <div className="mt-1 flex items-center gap-2 text-xs">
+                      <span className={`px-2 py-0.5 rounded ${r.type === 'Credit' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{r.type}</span>
+                      <span className={`px-2 py-0.5 rounded ${r.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span>
+                    </div>
+                  </div>
+                  <div className="text-[#303030] text-sm font-semibold">₹{r.amount.toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full">
               <thead>
                 <tr className="text-left text-xs text-gray-600 border-b">

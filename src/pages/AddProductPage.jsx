@@ -1,10 +1,11 @@
 import React, {useEffect, useState} from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 
 import { Helmet } from 'react-helmet'
 import LayoutWrapper from '../components/LayoutWrapper'
 import NoProductsState from '../components/NoProductsState'
 import AddProduct from '../components/AddProduct'
-import { listProducts, deleteProduct } from '../services/db'
+import { listProducts, deleteProduct, exportProductsCsv, importProductsCsv } from '../services/db'
 import FilterTabs from '../components/FilterTabs'
 
 const Page1 = (props) => {
@@ -16,6 +17,10 @@ const Page1 = (props) => {
   const [products, setProducts] = useState([])
   const [selectedStatus, setSelectedStatus] = useState('All')
   const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [working, setWorking] = useState(false)
+  const [importSummary, setImportSummary] = useState(null)
+  const fileInputRef = React.useRef(null)
     
       useEffect(() => {
         // Simulate loading time for content
@@ -39,8 +44,89 @@ const Page1 = (props) => {
         // non-blocking if API not running
       }
     })()
-        
   }, [selectedStatus])
+
+  // Close bulk modal with Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') closeBulkModal() }
+    if (showBulkModal) {
+      document.addEventListener('keydown', onKey)
+      return () => document.removeEventListener('keydown', onKey)
+    }
+  }, [showBulkModal])
+
+  // Dismiss success toast with Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setShowSuccess(false) }
+    if (showSuccess) {
+      document.addEventListener('keydown', onKey)
+      return () => document.removeEventListener('keydown', onKey)
+    }
+  }, [showSuccess])
+
+  // Bulk modal functions
+  const openBulkModal = () => setShowBulkModal(true)
+  const closeBulkModal = () => { setShowBulkModal(false); setImportSummary(null); setWorking(false) }
+
+  const triggerFilePicker = () => fileInputRef.current && fileInputRef.current.click()
+  const onFilePicked = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    try {
+      setWorking(true)
+      const result = await importProductsCsv(file)
+      setImportSummary(result)
+      // refresh list
+      const items = await listProducts({ status: selectedStatus })
+      if (Array.isArray(items)) {
+        setProducts(items)
+        setHasProducts(items.length > 0)
+      }
+    } catch (err) {
+      alert(`Import failed\n\n${err?.message || err}`)
+    } finally {
+      setWorking(false)
+      // reset file input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      setWorking(true)
+      const blob = await exportProductsCsv()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `products-${new Date().toISOString().slice(0,10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert(`Export failed\n\n${err?.message || err}`)
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const downloadFailuresReport = () => {
+    if (!importSummary || !Array.isArray(importSummary.failures) || importSummary.failures.length === 0) return
+    const rows = [['Row','Error'], ...importSummary.failures.map(f => [f.row, f.error])]
+    const csv = rows.map(r => r.map(v => {
+      const s = String(v ?? '')
+      return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+    }).join(',')).join('\r\n') + '\r\n'
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'import-failures.csv'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
 
   const handleDeleteProduct = async (p) => {
     const pid = p.id || p._id
@@ -112,25 +198,92 @@ const Page1 = (props) => {
   if (!hasProducts) {
     return (
       <LayoutWrapper isLoading={isLoading}>
-        <NoProductsState onAddProduct={handleAddProductClick} />
+        <NoProductsState onAddProduct={handleAddProductClick} onImport={openBulkModal} />
+        {/* Persistent hidden input for CSV import (available even when modal is closed) */}
+        <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={onFilePicked} />
+        {/* Bulk Import/Export Modal (rendered in empty state too) */}
+        <AnimatePresence>
+          {showBulkModal && (
+            <motion.div
+              className="fixed inset-0 z-[9999] flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+                onClick={closeBulkModal}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              <motion.div
+                className="relative bg-white rounded-xl shadow-2xl w-[92vw] max-w-[560px] p-5"
+                initial={{ y: 24, opacity: 0, scale: 0.98 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 24, opacity: 0, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-base font-semibold text-[#303030]">Bulk Import/Export</div>
+                  <button className="w-8 h-8 rounded-lg hover:bg-gray-100" onClick={closeBulkModal}>✕</button>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">Use the sample CSV to format your grocery products. You can import products to save time or export all products to CSV (Excel compatible).</p>
+                <a className="inline-flex items-center gap-2 text-brand-green text-sm underline mb-4" href="/sample-products.csv" target="_blank" rel="noreferrer">Download sample CSV</a>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button className="h-10 px-3 rounded-lg bg-white border border-gray-300 text-sm" onClick={handleExport} disabled={working}>
+                    {working ? 'Preparing…' : 'Export CSV'}
+                  </button>
+                  <button className="h-10 px-3 rounded-lg bg-brand-green text-white text-sm" onClick={triggerFilePicker} disabled={working}>
+                    {working ? 'Uploading…' : 'Import from CSV'}
+                  </button>
+                </div>
+                {importSummary && (
+                  <div className="mt-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50">
+                    <div className="text-sm text-emerald-800 font-medium">Import completed</div>
+                    <div className="text-xs text-emerald-700 mt-1">Created: {importSummary.created} · Failed: {importSummary.failed}</div>
+                    {Array.isArray(importSummary.failures) && importSummary.failures.length > 0 && (
+                      <button className="mt-2 text-xs underline text-emerald-700" onClick={downloadFailuresReport}>Download failure report</button>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </LayoutWrapper>
     )
   }
 
   return (
     <LayoutWrapper isLoading={isLoading}>
-        {/* Success confirmation banner */}
-        {showSuccess && (
-          <div className="fixed top-[70px] left-1/2 -translate-x-1/2 z-[1100]">
-            <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-600">
-                <path d="M20 6L9 17l-5-5"></path>
-              </svg>
-              <span className="text-sm font-medium">{lastProductTitle} added successfully</span>
-              <button className="ml-2 text-emerald-700 text-xs underline" onClick={()=>setShowSuccess(false)}>Dismiss</button>
-            </div>
-          </div>
-        )}
+        {/* Success confirmation - centered overlay */}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              className="fixed inset-0 flex items-center justify-center z-[9999]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center"
+                initial={{ scale: 0.96, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.96, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              >
+                <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-600">
+                    <path d="M20 6L9 17l-5-5"></path>
+                  </svg>
+                </div>
+                <div className="text-sm font-medium text-emerald-800">{lastProductTitle} added successfully</div>
+                <button className="mt-2 text-xs text-emerald-700 underline" onClick={()=>setShowSuccess(false)}>Dismiss</button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* <div className="overflow-x-auto"> */}
       <Helmet>
         <title>Page1 - exported project</title>
@@ -141,8 +294,8 @@ const Page1 = (props) => {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-4">
           <h1 className="text-[#303030] text-[24px] md:text-[28px] font-bold font-manrope m-0">Products</h1>
           <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-            <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm">Export</button>
-            <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm">Import</button>
+            <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm" onClick={openBulkModal}>Export</button>
+            <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm" onClick={openBulkModal}>Import</button>
             <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm">More Actions</button>
             <button className="h-9 px-3 rounded-lg bg-brand-green text-white text-sm w-full md:w-auto" onClick={handleAddProductClick}>Add Product</button>
           </div>
@@ -159,8 +312,60 @@ const Page1 = (props) => {
           </div>
         )}
 
-        {/* Products Table (dynamic) */}
-        <div className="overflow-x-auto">
+        {/* Products List - Responsive */}
+        {/* Mobile (cards) */}
+        <div className="md:hidden">
+          <div className="mb-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={products.length > 0 && selectedProductIds.length === products.map(p=>p.id || p._id).filter(Boolean).length}
+              onChange={toggleSelectAllProducts}
+            />
+            <span className="text-sm text-gray-600">Select all</span>
+          </div>
+
+          <div className="divide-y">
+            {products.map((p,i)=>{
+              const image = (p.images && p.images[0]) || '/favicon.ico'
+              const name = p.title || `Product ${i+1}`
+              const size = p.weight ? `${p.weight}${p.weightUnit || ''}` : ''
+              const status = p.status || 'Active'
+              const stock = typeof p.quantity === 'number' ? `${p.quantity} in stock` : '—'
+              const cat = p.category || '-'
+              const ch = ['onlineStore','shop','pointOfSale'].filter(k => p[k]).length || 0
+              const rowId = p.id || p._id
+              return (
+                <div key={p.id || p._id || i} className="py-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={selectedProductIds.includes(rowId)}
+                      onChange={() => toggleSelectProduct(rowId)}
+                    />
+                    <img src={image} alt={name} className="w-12 h-12 rounded object-cover" />
+                    <div className="flex-1">
+                      <div className="text-[#303030] text-sm font-medium">{name}</div>
+                      {size && <div className="text-gray-500 text-xs">{size}</div>}
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="px-2 py-0.5 rounded bg-green-100 text-green-700">{status}</span>
+                        <span className="text-gray-600">{stock}</span>
+                        <span className="text-gray-500">• {cat}</span>
+                        <span className="text-gray-500">• {ch} ch</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <button className="h-8 px-3 rounded bg-white border border-red-300 text-red-700 text-xs" onClick={()=>handleDeleteProduct(p)}>Delete</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Desktop (table) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="text-left text-sm text-gray-600 border-b">
@@ -221,7 +426,58 @@ const Page1 = (props) => {
           </table>
         </div>
       </div>
-    {/* </div> */}
+
+      {/* Bulk Import/Export Modal */}
+      <AnimatePresence>
+        {showBulkModal && (
+          <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+              onClick={closeBulkModal}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            <motion.div
+              className="relative bg-white rounded-xl shadow-2xl w-[92vw] max-w-[560px] p-5"
+              initial={{ y: 24, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 24, opacity: 0, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-base font-semibold text-[#303030]">Bulk Import/Export</div>
+                <button className="w-8 h-8 rounded-lg hover:bg-gray-100" onClick={closeBulkModal}>✕</button>
+              </div>
+              <p className="text-xs text-gray-600 mb-4">Use the sample CSV to format your grocery products. You can import products to save time or export all products to CSV (Excel compatible).</p>
+              <a className="inline-flex items-center gap-2 text-brand-green text-sm underline mb-4" href="/sample-products.csv" target="_blank" rel="noreferrer">Download sample CSV</a>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button className="h-10 px-3 rounded-lg bg-white border border-gray-300 text-sm" onClick={handleExport} disabled={working}>
+                  {working ? 'Preparing…' : 'Export CSV'}
+                </button>
+                <button className="h-10 px-3 rounded-lg bg-brand-green text-white text-sm" onClick={triggerFilePicker} disabled={working}>
+                  {working ? 'Uploading…' : 'Import from CSV'}
+                </button>
+                <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={onFilePicked} />
+              </div>
+              {importSummary && (
+                <div className="mt-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50">
+                  <div className="text-sm text-emerald-800 font-medium">Import completed</div>
+                  <div className="text-xs text-emerald-700 mt-1">Created: {importSummary.created} · Failed: {importSummary.failed}</div>
+                  {Array.isArray(importSummary.failures) && importSummary.failures.length > 0 && (
+                    <button className="mt-2 text-xs underline text-emerald-700" onClick={downloadFailuresReport}>Download failure report</button>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </LayoutWrapper>
   )
 }

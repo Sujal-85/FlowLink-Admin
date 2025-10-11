@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import LayoutWrapper from './LayoutWrapper';
-import { ChevronLeft, Search, Calendar, Clock, Tag } from 'lucide-react';
 import { useHistory } from 'react-router-dom';
-import { createDiscount } from '../services/db';
+import { createDiscount, listProducts } from '../services/db';
+import LoaderOverlay from './LoaderOverlay'
+import { Percent } from 'lucide-react'
 
 const AddDiscount = () => {
   const history = useHistory();
@@ -11,6 +12,19 @@ const AddDiscount = () => {
   const [valueType, setValueType] = useState('percentage'); // 'percentage' | 'fixed'
   const [amount, setAmount] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [appliesScope, setAppliesScope] = useState('all'); // 'all' | 'selected'
+  const [products, setProducts] = useState([]);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+
+  useEffect(() => {
+    ;(async () => {
+      try { const items = await listProducts({ status: 'All' }); setProducts(Array.isArray(items) ? items : []) } catch {}
+    })()
+  }, [])
+
+  const toggleProduct = (id) => {
+    setSelectedProductIds(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id])
+  }
 
   const handleGenerateCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -29,8 +43,7 @@ const AddDiscount = () => {
         code: discountCode || undefined,
         type: valueType,
         amount: Number(amount) || 0,
-        status: 'Active',
-        startsAt: new Date().toISOString(),
+        productIds: appliesScope === 'selected' ? selectedProductIds : undefined,
       };
       const id = await createDiscount(payload);
       setIsSaving(false);
@@ -44,13 +57,14 @@ const AddDiscount = () => {
 
   return (
     <LayoutWrapper>
+      <LoaderOverlay open={isSaving} label="Saving discount…" />
       <div className="p-6 min-h-screen font-sans">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          {/* <button className="p-2 rounded-md hover:bg-gray-200">
-            <ChevronLeft size={24} />
-          </button> */}
-          <h1 className="text-2xl font-semibold text-gray-800 ml-2">Create discount</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-lg bg-[#1e1f22] text-white flex items-center justify-center"><Percent size={18} /></div>
+            <h1 className="text-2xl font-semibold text-gray-800">Create discount</h1>
+          </div>
           <div className="flex items-center gap-2">
             <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm" onClick={()=>history.push('/discounts')}>Cancel</button>
             <button className="h-9 px-3 rounded-lg bg-[#1a1a1a] text-white text-sm" onClick={handleSave}>Save discount</button>
@@ -61,10 +75,10 @@ const AddDiscount = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Column */}
           <div className="md:col-span-2 space-y-6">
-            {/* Amount off products Card */}
+            {/* Discount basics */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-1">Amount off products</h2>
-              <p className="text-sm text-gray-500 mb-4">Offer a discount on specific products or collections.</p>
+              <h2 className="text-lg font-semibold mb-1">Discount details</h2>
+              <p className="text-sm text-gray-500 mb-4">Set how your discount is applied.</p>
               
               <div className="space-y-4">
                 <div>
@@ -93,13 +107,12 @@ const AddDiscount = () => {
                         className="w-full p-2 border border-gray-300 rounded-md" 
                         value={discountCode}
                         onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                        placeholder="e.g. SUMMER10"
                       />
                       <button 
                         type="button"
                         onClick={handleGenerateCode}
                         className="ml-4 text-sm font-semibold text-blue-600 hover:underline whitespace-nowrap">
-                        Generate random code
+                        Generate code
                       </button>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Customers must enter this code at checkout.</p>
@@ -108,7 +121,7 @@ const AddDiscount = () => {
               </div>
             </div>
 
-            {/* Discount Value Card */}
+            {/* Discount value */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
               <h2 className="text-lg font-semibold mb-4">Discount Value</h2>
               <div className="flex items-center gap-4">
@@ -131,108 +144,48 @@ const AddDiscount = () => {
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">{valueType === 'percentage' ? '%' : ''}</span>
                 </div>
               </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Applies to</label>
-                <select className="w-full p-2 border border-gray-300 rounded-md">
-                  <option>Specific collections</option>
-                  <option>Specific products</option>
-                </select>
-                <div className="relative mt-2">
-                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" placeholder="Search collections" className="w-full p-2 pl-10 border border-gray-300 rounded-md" />
-                  <button className="absolute right-1 top-1/2 -translate-y-1/2 px-4 py-1.5 text-sm font-semibold bg-gray-100 hover:bg-gray-200 rounded-md">Browse</button>
+            </div>
+
+            {/* Applies to */}
+            <div className="bg-white p-6 rounded-lg border border-gray-200">
+              <h2 className="text-lg font-semibold mb-4">Applies to</h2>
+              <div className="flex items-center gap-6 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="applies" checked={appliesScope==='all'} onChange={()=>setAppliesScope('all')} />
+                  All products
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="applies" checked={appliesScope==='selected'} onChange={()=>setAppliesScope('selected')} />
+                  Selected products
+                </label>
+              </div>
+              {appliesScope === 'selected' && (
+                <div className="mt-3 max-h-56 overflow-auto border rounded-md">
+                  {products.length === 0 && (
+                    <div className="p-3 text-sm text-gray-500">No products found.</div>
+                  )}
+                  <ul className="divide-y">
+                    {products.map(p => {
+                      const id = p.id || p._id
+                      return (
+                        <li key={id} className="flex items-center gap-3 p-2">
+                          <input type="checkbox" checked={selectedProductIds.includes(id)} onChange={()=>toggleProduct(id)} />
+                          {Array.isArray(p.images) && p.images[0] ? (
+                            <img src={p.images[0]} alt={p.title || 'Product'} className="w-9 h-9 object-cover rounded" />
+                          ) : (
+                            <div className="w-9 h-9 rounded bg-gray-100 border"></div>
+                          )}
+                          <div className="flex-1 text-sm text-gray-800">{p.title || 'Untitled'}{typeof p.price === 'number' ? ` · ₹${p.price}` : ''}</div>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 </div>
-              </div>
+              )}
             </div>
-
-            {/* Other Cards stubbed from screenshots */}
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4">Eligibility</h2>
-              <div className="space-y-2 text-sm">
-                <label className="flex items-center"><input type="radio" name="eligibility" className="mr-2" defaultChecked /> All customers</label>
-                <label className="flex items-center"><input type="radio" name="eligibility" className="mr-2" /> Specific customer segments</label>
-                <label className="flex items-center"><input type="radio" name="eligibility" className="mr-2" /> Specific customers</label>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4">Minimum purchase requirements</h2>
-              <div className="space-y-2 text-sm">
-                <label className="flex items-center"><input type="radio" name="purchase-req" className="mr-2" defaultChecked /> No minimum requirements</label>
-                <label className="flex items-center"><input type="radio" name="purchase-req" className="mr-2" /> Minimum purchase amount (₹)</label>
-                <label className="flex items-center"><input type="radio" name="purchase-req" className="mr-2" /> Minimum quantity of items</label>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4">Maximum discount uses</h2>
-              <div className="space-y-2 text-sm">
-                <label className="flex items-center"><input type="checkbox" className="mr-2" /> Limit number of times this discount can be used in total</label>
-                <label className="flex items-center"><input type="checkbox" className="mr-2" /> Limit to one use per customer</label>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4">Combinations</h2>
-              <div className="space-y-2 text-sm">
-                <label className="flex items-center"><input type="checkbox" className="mr-2" /> Product discounts</label>
-                <label className="flex items-center"><input type="checkbox" className="mr-2" /> Order discounts</label>
-                <label className="flex items-center"><input type="checkbox" className="mr-2" /> Shipping discounts</label>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-4">Active dates</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start date</label>
-                  <div className="relative">
-                    <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="date" defaultValue="2025-09-21" className="w-full p-2 pl-10 border border-gray-300 rounded-md" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start time (IST)</label>
-                  <div className="relative">
-                    <Clock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="time" defaultValue="23:53" className="w-full p-2 pl-10 border border-gray-300 rounded-md" />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4">
-                <label className="flex items-center text-sm"><input type="checkbox" className="mr-2" /> Set end date</label>
-              </div>
-            </div>
-
+            
           </div>
-
-          {/* Right Column */}
-          <div className="md:col-span-1 space-y-6">
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-2">Summary</h2>
-              <p className="text-sm text-gray-500 mb-4">No discount code yet</p>
-              <div className="text-sm space-y-2">
-                <p className="font-semibold text-gray-800">Type</p>
-                <p className="text-gray-600">Amount off products</p>
-                <div className="flex items-center text-gray-600">
-                  <Tag size={16} className="mr-2" />
-                  <span>Product discount</span>
-                </div>
-                <p className="font-semibold text-gray-800 pt-2">Details</p>
-                <ul className="list-disc list-inside text-gray-600 space-y-1">
-                  <li>All customers</li>
-                  <li>No minimum purchase requirement</li>
-                  <li>No usage limits</li>
-                  <li>Can't combine with other discounts</li>
-                  <li>Active from today</li>
-                </ul>
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold mb-2">Sales channel access</h2>
-              <label className="flex items-center text-sm"><input type="checkbox" className="mr-2" /> Allow discount to be featured on selected channels</label>
-            </div>
-          </div>
+          <div className="md:col-span-1"></div>
         </div>
       </div>
     </LayoutWrapper>

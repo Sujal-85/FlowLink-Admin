@@ -1,0 +1,4 @@
+title,brand,category,sku,barcode,unit,netWeight,mrp,price,quantity,expiryDate,taxRate,hsn,description,image
+"Amul Taaza Toned Milk",Amul,Dairy,AM-TZ-500,8901262,ml,500,34,32,100,2025-12-31,5,0401,"Toned milk, keep refrigerated.","https://picsum.photos/400/400?random=1"
+"Fortune Sunlite Refined Sunflower Oil",Fortune,Oil & Ghee,FT-SF-1L,8901725,ml,1000,190,175,50,2026-06-30,5,1512,"Light and healthy refined sunflower oil.","https://picsum.photos/400/400?random=2"
+"Aashirvaad Whole Wheat Atta",Aashirvaad,Flour & Grains,AS-AT-10,8904033,kg,10,560,520,20,2026-03-31,5,1101,"Whole wheat flour for soft rotis.","https://picsum.photos/400/400?random=3"
