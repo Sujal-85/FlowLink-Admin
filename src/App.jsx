@@ -18,6 +18,8 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import FinancesPage from './pages/FinancesPage'
 import DiscountsPage from './pages/DiscountsPage'
 import AddDiscount from './components/AddDiscount'
+import OffersPage from './pages/OffersPage'
+import AddOfferPage from './pages/AddOfferPage'
 import NotFound from './pages/not-found'
 import Setting from './pages/SettingPage'
 import PrivateRoute from './components/PrivateRoute'
@@ -50,9 +52,11 @@ const App = () => {
         <Route component={FinancesPage} exact path="/finances" />
         <Route component={DiscountsPage} exact path="/discounts" />
         <Route component={AddDiscount} exact path="/discounts/new" />
+        <Route component={OffersPage} exact path="/offers" />
+        <Route component={AddOfferPage} exact path="/offers/new" />
         <Route component={AnalyticsPage} exact path="/analytics" />
         <Route component={CustomerPage} exact path="/customers" />
-        <Route component={Setting} exact path="/setting" />
+        <PrivateRoute component={Setting} exact path="/setting" />
         <Route component={NotFound} path="**" />
         <Redirect to="**" />
       </Switch>

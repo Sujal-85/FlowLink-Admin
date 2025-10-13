@@ -1,6 +1,6 @@
 import React from 'react'
 
-const NoProductsState = ({ onAddProduct }) => {
+const NoProductsState = ({ onAddProduct, onImport = () => {} }) => {
   return (
     <div className="w-full">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-4">
@@ -39,7 +39,7 @@ const NoProductsState = ({ onAddProduct }) => {
                 </svg>
                 Add product
               </button>
-              <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm inline-flex items-center gap-2">
+              <button className="h-9 px-3 rounded-lg bg-white border border-gray-300 text-sm inline-flex items-center gap-2" onClick={onImport}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7,10 12,15 17,10"></polyline>

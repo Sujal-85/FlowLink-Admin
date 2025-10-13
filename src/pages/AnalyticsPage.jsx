@@ -88,12 +88,12 @@ const AnalyticsPage = () => {
           <meta property="og:title" content="Analytics - FlowLink" />
         </Helmet>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <BarChart3 size={18} />
             <h1 className="text-[#303030] text-[28px] font-bold font-manrope m-0">Analytics</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button className="h-9 px-3 rounded-full bg-[#1a1a1a] text-white text-sm">Today</button>
             <button className="h-9 px-3 rounded-full bg-white border border-gray-300 text-sm inline-flex items-center gap-2">
               <Calendar size={14} />
@@ -113,14 +113,14 @@ const AnalyticsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <StatCard title="Gross sales" value="₹0" underline />
           <StatCard title="Returning customer rate" value="0%" underline />
           <StatCard title="Orders fulfilled" value="0" underline />
           <StatCard title="Orders" value="0" underline />
         </div>
 
-        <div className="grid grid-cols-[2fr_1fr] gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
           <div>
             <PlaceholderChart title="Total sales over time" />
           </div>
@@ -129,7 +129,7 @@ const AnalyticsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <EmptyPanel title="Total sales by sales channel" />
           <PlaceholderChart title="Average order value over time" />
           <EmptyPanel title="Total sales by product" />

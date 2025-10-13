@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Helmet } from 'react-helmet'
 import { useHistory } from 'react-router-dom'
 import { 
@@ -44,26 +45,23 @@ const AddProduct = ({ onProductAdded }) => {
   const [productData, setProductData] = useState({
     title: '',
     description: '',
-    price: '0.00',
-    comparePrice: '0.00',
+    brand: '',
+    category: '',
+    vendor: '',
+    sku: '',
+    barcode: '',
+    mrp: 0,
+    price: 0,
+    chargeTax: true,
+    taxRate: 0,
+    hsn: '',
     trackQuantity: true,
     quantity: 0,
     continueSelling: false,
-    physicalProduct: true,
-    weight: '0',
-    weightUnit: 'lb',
-    chargeTax: true,
-    status: 'Active',
-    onlineStore: false,
-    shop: false,
-    pointOfSale: false,
-    markets: false,
-    category: '',
-    productType: '',
-    vendor: '',
-    collections: '',
-    tags: '',
-    themeTemplate: ''
+    unit: 'kg',
+    netWeight: 0,
+    expiryDate: '', // yyyy-mm-dd
+    status: 'Active'
   })
 
   useEffect(() => {
@@ -221,13 +219,51 @@ const AddProduct = ({ onProductAdded }) => {
       <LayoutWrapper 
         isLoading={isLoading} 
         customHeader={<ProductHeader onDiscard={handleDiscard} onSave={handleSave} />}
+        contentClassName="px-0 md:px-6 pt-2 md:pt-4 pb-2"
       >
-        <div className="flex-1 p-6 bg-[#f1f1f1] overflow-y-auto">
+        <div className="flex-1 px-0 py-3 md:p-6 bg-[#f1f1f1] overflow-y-auto">
           <div className="mb-6">
             <h1 className="text-[#303030] text-[28px] font-bold font-manrope m-0">Add product</h1>
           </div>
 
-          <div className="grid grid-cols-1 md:[grid-template-columns:1fr_320px] gap-6 w-full">
+          {/* Grocery details */}
+          <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
+            <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Grocery details</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-gray-600">Brand</label>
+                <input
+                  type="text"
+                  value={productData.brand}
+                  onChange={(e) => handleInputChange('brand', e.target.value)}
+                  placeholder="e.g., Amul, Nestlé"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-[rgba(58,169,63,0.1)]"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-gray-600">SKU</label>
+                <input
+                  type="text"
+                  value={productData.sku}
+                  onChange={(e) => handleInputChange('sku', e.target.value)}
+                  placeholder="Internal stock code"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-gray-600">Barcode</label>
+                <input
+                  type="text"
+                  value={productData.barcode}
+                  onChange={(e) => handleInputChange('barcode', e.target.value)}
+                  placeholder="EAN/UPC (optional)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:[grid-template-columns:1fr_320px] gap-y-6 gap-x-8 md:gap-x-12 lg:gap-x-16 w-full">
             {/* Left Column */}
             <div className="flex flex-col gap-6">
               {/* Title and Description */}
@@ -334,58 +370,57 @@ const AddProduct = ({ onProductAdded }) => {
               {/* Pricing */}
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Pricing</label>
-                <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-3">
-                      <label className="block text-[#303030] text-sm font-semibold font-manrope">Price</label>
-                      <div className="relative flex items-center">
-                        <span className="absolute left-3 text-gray-500 text-sm z-[1]">$</span>
-                        <input 
-                          type="text" 
-                          value={productData.price}
-                          onChange={(e) => handleInputChange('price', e.target.value)}
-                          className="w-full pl-8 ml-[10px] px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-[rgba(58,169,63,0.1)]"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      <label className="block text-[#303030] text-sm font-semibold font-manrope">Compare-price</label>
-                      <div className="relative flex items-center">
-                        <span className="absolute left-3 text-gray-500 text-sm z-[1]">$</span>
-                        <input 
-                          type="text" 
-                          value={productData.comparePrice}
-                          onChange={(e) => handleInputChange('comparePrice', e.target.value)}
-                          className="w-full pl-8 ml-[10px] px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-[rgba(58,169,63,0.1)]"
-                        />
-                        <span className="absolute right-3 text-gray-500 text-xs cursor-help">?</span>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-600">MRP</label>
+                    <input
+                      type="number"
+                      value={productData.mrp}
+                      onChange={(e) => handleInputChange('mrp', Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                      placeholder="e.g., 120"
+                    />
                   </div>
-                  
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-600">Selling price</label>
+                    <input
+                      type="number"
+                      value={productData.price}
+                      onChange={(e) => handleInputChange('price', Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                      placeholder="e.g., 99"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-600">HSN/SAC (optional)</label>
+                    <input
+                      type="text"
+                      value={productData.hsn}
+                      onChange={(e) => handleInputChange('hsn', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                      placeholder="e.g., 0402"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       id="chargeTax"
                       checked={productData.chargeTax}
                       onChange={(e) => handleInputChange('chargeTax', e.target.checked)}
                     />
                     <label className="m-0 font-normal cursor-pointer" htmlFor="chargeTax">Charge tax on this product</label>
                   </div>
-
-                  <div className="pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between py-1 text-sm font-manrope">
-                      <span className="text-gray-500">Cost per item</span>
-                      <span className="text-[#303030] font-medium">$ 0.00 <span className="text-gray-500 text-xs cursor-help">?</span></span>
-                    </div>
-                    <div className="flex items-center justify-between py-1 text-sm font-manrope">
-                      <span className="text-gray-500">Profit</span>
-                      <span className="text-[#303030] font-medium">--</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1 text-sm font-manrope">
-                      <span className="text-gray-500">Margin</span>
-                      <span className="text-[#303030] font-medium">--</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-600 w-24">Tax rate %</label>
+                    <input
+                      type="number"
+                      value={productData.taxRate}
+                      onChange={(e) => handleInputChange('taxRate', Number(e.target.value))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                      placeholder="e.g., 5"
+                    />
                   </div>
                 </div>
               </div>
@@ -433,70 +468,54 @@ const AddProduct = ({ onProductAdded }) => {
                 </div>
               </div>
 
-              {/* Shipping */}
+              {/* Unit & Expiry */}
               <div className="bg-white rounded-xl p-6 shadow-sm">
-                <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Shipping</label>
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      id="physicalProduct"
-                      checked={productData.physicalProduct}
-                      onChange={(e) => handleInputChange('physicalProduct', e.target.checked)}
+                <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Unit & Expiry</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-600">Unit</label>
+                    <select
+                      value={productData.unit}
+                      onChange={(e) => handleInputChange('unit', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                    >
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                      <option value="ml">ml</option>
+                      <option value="l">l</option>
+                      <option value="pcs">pcs</option>
+                      <option value="pack">pack</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-600">Net weight/qty</label>
+                    <input
+                      type="number"
+                      value={productData.netWeight}
+                      onChange={(e) => handleInputChange('netWeight', Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                      placeholder="e.g., 500"
                     />
-                    <label className="m-0 font-normal cursor-pointer" htmlFor="physicalProduct">This is a physical product</label>
                   </div>
-                  
-                  <div className="flex flex-col gap-3">
-                    <label className="block text-[#303030] text-sm font-semibold font-manrope">Weight</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="number" 
-                        value={productData.weight}
-                        onChange={(e) => handleInputChange('weight', e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
-                      />
-                      <select 
-                        value={productData.weightUnit}
-                        onChange={(e) => handleInputChange('weightUnit', e.target.value)}
-                        className="w-[60px] px-2 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
-                      >
-                        <option value="lb">lb</option>
-                        <option value="kg">kg</option>
-                      </select>
-                    </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-600">Expiry date</label>
+                    <input
+                      type="date"
+                      value={productData.expiryDate}
+                      onChange={(e) => handleInputChange('expiryDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
+                    />
                   </div>
-                  
-                  <button className="inline-flex items-center gap-2 p-0 border-0 bg-none text-brand-green text-sm font-manrope cursor-pointer hover:underline">
-                    <Plus size={16} />
-                    Add customs information
-                  </button>
                 </div>
               </div>
 
-              {/* Variants */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Variants</label>
-                <button className="inline-flex items-center gap-2 p-0 border-0 bg-none text-brand-green text-sm font-manrope cursor-pointer hover:underline">
-                  <Plus size={16} />
-                  Add options like size or color
-                </button>
-              </div>
+              {/* Variants removed for grocery simplification */}
 
-              {/* Search Engine Listing */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-[#303030] text-sm font-semibold font-manrope">Search engine listing</label>
-                  <button className="px-2 py-1 border border-gray-300 rounded bg-white text-[#303030] text-xs font-manrope">Edit</button>
-                </div>
-                <p className="text-gray-500 text-xs font-manrope m-0 leading-snug">
-                  Add a title and description to see how this product might appear in a search engine listing.
-                </p>
-              </div>
+              {/* SEO section removed for simplicity */}
             </div>
 
             {/* Right Column */}
-            <div className="flex flex-col gap-6 order-last md:order-none">
+            <div className="flex flex-col gap-6 order-last md:order-none md:ml-8 lg:ml-12">
               {/* Status */}
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Status</label>
@@ -511,61 +530,7 @@ const AddProduct = ({ onProductAdded }) => {
                 </select>
               </div>
 
-              {/* Publishing */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-[#303030] text-sm font-semibold font-manrope">Publishing</label>
-                  <button className="flex items-center justify-center w-6 h-6 rounded text-gray-600 hover:bg-gray-100"><MoreHorizontal size={16} /></button>
-                </div>
-                
-                <div className="mb-5">
-                  <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Sales channels</label>
-                  <div className="flex items-center gap-2 mb-2">
-                    <input 
-                      type="checkbox" 
-                      id="onlineStore"
-                      checked={productData.onlineStore}
-                      onChange={(e) => handleInputChange('onlineStore', e.target.checked)}
-                    />
-                    <label className="m-0 font-normal cursor-pointer" htmlFor="onlineStore">Online Store</label>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <input 
-                      type="checkbox" 
-                      id="shop"
-                      checked={productData.shop}
-                      onChange={(e) => handleInputChange('shop', e.target.checked)}
-                    />
-                    <label className="m-0 font-normal cursor-pointer" htmlFor="shop">Shop</label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      id="pointOfSale"
-                      checked={productData.pointOfSale}
-                      onChange={(e) => handleInputChange('pointOfSale', e.target.checked)}
-                    />
-                    <label className="m-0 font-normal cursor-pointer" htmlFor="pointOfSale">Point of Sale</label>
-                  </div>
-                  <p className="text-gray-500 text-xs font-manrope my-2 leading-snug">
-                    Point of Sale has not been set up. Finish the remaining steps to start selling in person.
-                  </p>
-                  <button className="p-0 border-0 bg-none text-brand-green text-xs font-manrope cursor-pointer hover:underline">Learn more</button>
-                </div>
-
-                <div className="">
-                  <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Markets</label>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      id="markets"
-                      checked={productData.markets}
-                      onChange={(e) => handleInputChange('markets', e.target.checked)}
-                    />
-                    <label className="m-0 font-normal cursor-pointer" htmlFor="markets">International and United States</label>
-                  </div>
-                </div>
-              </div>
+              {/* Publishing removed */}
 
               {/* Product Organization */}
               <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -582,17 +547,7 @@ const AddProduct = ({ onProductAdded }) => {
                     onChange={(e) => handleInputChange('category', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
                   />
-                  <p className="text-gray-500 text-xs font-manrope m-0">Determines US tax rates</p>
-                </div>
-                
-                <div className="flex flex-col gap-3 mt-4">
-                  <label className="block text-[#303030] text-sm font-semibold font-manrope">Product type</label>
-                  <input 
-                    type="text" 
-                    value={productData.productType}
-                    onChange={(e) => handleInputChange('productType', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
-                  />
+                  <p className="text-gray-500 text-xs font-manrope m-0">Used for grouping and search.</p>
                 </div>
                 
                 <div className="flex flex-col gap-3 mt-4">
@@ -604,53 +559,35 @@ const AddProduct = ({ onProductAdded }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
                   />
                 </div>
-                
-                <div className="flex flex-col gap-3 mt-4">
-                  <label className="block text-[#303030] text-sm font-semibold font-manrope">Collections</label>
-                  <input 
-                    type="text" 
-                    value={productData.collections}
-                    onChange={(e) => handleInputChange('collections', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
-                  />
-                </div>
-                
-                <div className="flex flex-col gap-3 mt-4">
-                  <label className="block text-[#303030] text-sm font-semibold font-manrope">Tags</label>
-                  <input 
-                    type="text" 
-                    value={productData.tags}
-                    onChange={(e) => handleInputChange('tags', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
-                  />
-                </div>
               </div>
-
-              {/* Theme Template */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Theme template</label>
-                <select 
-                  value={productData.themeTemplate}
-                  onChange={(e) => handleInputChange('themeTemplate', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-manrope bg-white focus:outline-none"
-                >
-                  <option value="">Default product</option>
-                </select>
-              </div>
+              {/* Theme template removed */}
             </div>
           </div>
         </div>
       </LayoutWrapper>
 
       {/* Saving Overlay */}
-      {isSaving && (
-        <div className="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-[9999]">
-          <div className="text-center">
-            <div className="w-10 h-10 border-4 border-gray-200 border-t-brand-green rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-[#303030] text-base font-medium font-manrope">Processing...</p>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isSaving && (
+          <motion.div
+            className="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-[9999]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="text-center"
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+            >
+              <div className="w-10 h-10 border-4 border-gray-200 border-t-brand-green rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-[#303030] text-base font-medium font-manrope">Processing...</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }

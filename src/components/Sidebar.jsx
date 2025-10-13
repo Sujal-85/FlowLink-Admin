@@ -1,4 +1,5 @@
 import React from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useLocation, useHistory } from 'react-router-dom'
 import { 
   Home, 
@@ -25,6 +26,7 @@ const Sidebar = ({ isMobileMenuOpen, closeMobileMenu }) => {
     { path: '/customers', icon: Users, label: 'Customers' },
     { path: '/finances', icon: Building2, label: 'Finances' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/offers', icon: Lightbulb, label: 'Offers' },
     { path: '/discounts', icon: Percent, label: 'Discounts' },
     { path: '/setting', icon: Settings, label: 'Settings' }
   ]
@@ -37,18 +39,91 @@ const Sidebar = ({ isMobileMenuOpen, closeMobileMenu }) => {
     history.push(path)
   }
 
+  const isActivePath = (base) => {
+    const p = location.pathname || ''
+    return p === base || p.startsWith(base + '/')
+  }
+
   return (
     <>
-      {/* Mobile menu overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={closeMobileMenu}
-        ></div>
-      )}
+      {/* Mobile menu overlay + drawer with motion */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+              onClick={closeMobileMenu}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            <motion.aside
+              className={`fixed md:static top-[60px] md:top-auto left-0 w-[260px] bg-white text-black h-[calc(100vh-60px)] md:h/full rounded-xl z-50 md:translate-x-0 flex flex-col overflow-hidden`}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+            >
+              <div className="flex justify-between items-center p-4 border-b md:hidden">
+                <span className="font-semibold text-lg">Menu</span>
+                <button onClick={closeMobileMenu} className="p-1 rounded-md hover:bg-gray-100">
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <nav className="py-4 px-2">
+                {items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = isActivePath(item.path)
+                  const base = 'flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer text-sm font-medium'
+                  const active = isActive ? 'bg-green-100 text-green-900 border-l-4 border-green-500' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  return (
+                    <div 
+                      key={item.path}
+                      className={`${base} ${active}`}
+                      onClick={() => {
+                        handleNavigation(item.path);
+                        closeMobileMenu();
+                      }}
+                    >
+                      <Icon size={20} />
+                      <span>{item.label}</span>
+                    </div>
+                  )
+                })}
+                </nav>
+              </div>
+              {/* Bottom pinned Settings */}
+              {settingsItem && (
+                <div className="p-2 border-t">
+                  {(() => {
+                    const Icon = settingsItem.icon
+                    const isActive = isActivePath(settingsItem.path)
+                    const base = 'flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer text-sm font-medium'
+                    const active = isActive ? 'bg-green-100 text-green-900 border-l-4 border-green-500' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    return (
+                      <div
+                        className={`${base} ${active}`}
+                        onClick={() => {
+                          handleNavigation(settingsItem.path)
+                          closeMobileMenu()
+                        }}
+                      >
+                        <Icon size={20} />
+                        <span>{settingsItem.label}</span>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
-            <aside 
-        className={`fixed md:static top-[60px] md:top-auto left-0 w-[260px] bg-white text-black h-[calc(100vh-60px)] md:h-full z-50 transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col overflow-hidden`}>
+      {/* Desktop sidebar (static) */}
+      <aside 
+        className={`hidden md:flex md:static w-[260px] bg-white text-black h-full rounded-xl z-10 flex-col overflow-hidden`}>
         <div className="flex justify-between items-center p-4 border-b md:hidden">
           <span className="font-semibold text-lg">Menu</span>
           <button onClick={closeMobileMenu} className="p-1 rounded-md hover:bg-gray-100">
@@ -59,7 +134,7 @@ const Sidebar = ({ isMobileMenuOpen, closeMobileMenu }) => {
           <nav className="py-4 px-2">
           {items.map((item) => {
             const Icon = item.icon
-            const isActive = location.pathname === item.path
+            const isActive = isActivePath(item.path)
             const base = 'flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer text-sm font-medium'
                         const active = isActive ? 'bg-green-100 text-green-900 border-l-4 border-green-500' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             return (
@@ -84,7 +159,7 @@ const Sidebar = ({ isMobileMenuOpen, closeMobileMenu }) => {
           <div className="p-2 border-t">
             {(() => {
               const Icon = settingsItem.icon
-              const isActive = location.pathname === settingsItem.path
+              const isActive = isActivePath(settingsItem.path)
               const base = 'flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer text-sm font-medium'
               const active = isActive ? 'bg-green-100 text-green-900 border-l-4 border-green-500' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               return (

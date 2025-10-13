@@ -12,6 +12,7 @@ import {
   Menu
 } from 'lucide-react'
 import SearchBox from './SearchBox'
+import LoaderOverlay from './LoaderOverlay'
 
 const Header = ({ onToggleChat = () => {}, onToggleMobileMenu = () => {} }) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -19,6 +20,7 @@ const Header = ({ onToggleChat = () => {}, onToggleMobileMenu = () => {} }) => {
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const history = useHistory();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -35,11 +37,14 @@ const Header = ({ onToggleChat = () => {}, onToggleMobileMenu = () => {} }) => {
 
     const handleLogout = async () => {
     try {
+      setIsLoggingOut(true)
       await auth.logout()
     } finally {
       setShowLogoutConfirm(false)
       setShowDropdown(false)
       history.push('/login')
+      // Let overlay render for a moment during route change
+      setTimeout(() => setIsLoggingOut(false), 600)
     }
   };
 
@@ -50,6 +55,7 @@ const Header = ({ onToggleChat = () => {}, onToggleMobileMenu = () => {} }) => {
 
   return (
     <>
+      <LoaderOverlay open={isLoggingOut} label="Signing you out…" logoSrc="/flowlink-logo-black.png" />
       {/* Header */}
       <header className="bg-[#1a1a1a] h-[60px] flex items-center justify-between px-3 md:px-5 shadow w-full">
         <div className="flex items-center">

@@ -1,0 +1,4 @@
+firstName,lastName,email,phoneCountry,phoneNumber,status,language,marketingEmails,marketingSMS,collectTax,tags,notes,addressLine1,addressLine2,addressCity,addressState,addressPostalCode,addressCountry
+Riya,Sharma,riya@example.com,IN,9876543210,Active,en,true,false,,VIP,"Frequent buyer",12 MG Road,,Bengaluru,KA,560001,India
+Arjun,Verma,arjun@example.com,IN,9123456780,Active,en,false,false,,,"Requested gift wrap",221B Baker Street,,Mumbai,MH,400001,India
+Anita,Kulkarni,anita@example.com,IN,9988776655,Active,en,true,true,,Loyal,"Prefers morning delivery",5 Park Avenue,Apt 204,Pune,MH,411001,India

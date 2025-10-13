@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Helmet } from 'react-helmet';
 import LayoutWrapper from '../components/LayoutWrapper';
 import { Download, Percent } from 'lucide-react';
@@ -46,6 +47,23 @@ const DiscountsPage = () => {
     }
   }, [location.search, location.pathname, history]);
 
+  // Dismiss success overlay with Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setShowSuccess(false) }
+    if (showSuccess) {
+      document.addEventListener('keydown', onKey)
+      return () => document.removeEventListener('keydown', onKey)
+    }
+  }, [showSuccess])
+
+  // Body scroll-lock while success overlay is visible
+  useEffect(() => {
+    if (!showSuccess) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [showSuccess])
+
   const handleDeleteDiscount = async (d) => {
     const did = d.id || d._id;
     if (!did) return;
@@ -85,33 +103,46 @@ const DiscountsPage = () => {
 
   return (
     <LayoutWrapper isLoading={isLoading}>
-      <div className="max-w-[1100px]">
-        {showSuccess && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center">
-              <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-600">
-                  <path d="M20 6L9 17l-5-5"></path>
-                </svg>
-              </div>
-              <div className="text-sm font-medium text-emerald-800">{lastCode} created successfully</div>
-              <button className="mt-2 text-xs text-emerald-700 underline" onClick={()=>setShowSuccess(false)}>Dismiss</button>
-            </div>
-          </div>
-        )}
+      <div className="w-full">
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              className="fixed inset-0 flex items-center justify-center z-[9999]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center"
+                initial={{ scale: 0.96, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.96, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              >
+                <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-600">
+                    <path d="M20 6L9 17l-5-5"></path>
+                  </svg>
+                </div>
+                <div className="text-sm font-medium text-emerald-800">{lastCode} created successfully</div>
+                <button className="mt-2 text-xs text-emerald-700 underline" onClick={()=>setShowSuccess(false)}>Dismiss</button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <Helmet>
           <title>Discounts - FlowLink</title>
         </Helmet>
 
         {/* Top bar */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-lg bg-[#1e1f22] text-white flex items-center justify-center">
               <Percent size={18} />
             </div>
             <h1 className="text-[#303030] text-[28px] font-bold font-manrope m-0">Discounts</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button className="h-9 px-3 rounded-lg bg-gray-200 text-gray-400 text-sm inline-flex items-center gap-2 cursor-not-allowed" disabled>
               <Download size={16} /> Export
             </button>
@@ -128,14 +159,14 @@ const DiscountsPage = () => {
         <FilterTabs value={selectedStatus} onChange={setSelectedStatus} />
 
         {/* Center card */}
-        <div className="bg-white rounded-xl p-10 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-xl p-6 md:p-6 border border-gray-200 shadow-sm">
           <div className="flex flex-col items-center text-center w-full">
             {/* Image Container */}
-            <div className="w-[420px] h-[200px] flex items-center justify-center mb-2">
+            <div className="w-full max-w-[250px] flex items-center justify-center mb-2">
               <img
                 src="https://cdn.shopify.com/shopifycloud/web/assets/v1/vite/client/all/assets/empty-state-discount-IqX-GiQmgbHG.svg"
                 alt="Discount Illustration"
-                className="w-full h-full object-contain"
+                className="w-full h-auto object-contain"
               />
             </div>
             <h2 className="mt-4 text-[#303030] text-base font-semibold">Manage discounts and promotions</h2>
@@ -158,7 +189,7 @@ const DiscountsPage = () => {
           </div>
         </div>
 
-        {/* Discounts table */}
+        {/* Discounts list */}
         {discounts.length > 0 && (
           <div className="mt-4 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             {selectedDiscountIds.length > 0 && (
@@ -167,7 +198,50 @@ const DiscountsPage = () => {
                 <button className="h-8 px-3 rounded bg-white border border-red-300 text-red-700 text-xs" onClick={handleBulkDeleteDiscounts}>Delete selected</button>
               </div>
             )}
-            <div className="overflow-x-auto">
+
+            {/* Mobile cards */}
+            <div className="md:hidden">
+              <div className="mb-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={discounts.length > 0 && selectedDiscountIds.length === discounts.map(d=>d.id || d._id).filter(Boolean).length}
+                  onChange={toggleSelectAllDiscounts}
+                />
+                <span className="text-sm text-gray-600">Select all</span>
+              </div>
+              <div className="divide-y">
+                {discounts.map((d, i) => {
+                  const id = d.id || d._id
+                  return (
+                    <div key={id || i} className="py-3">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={selectedDiscountIds.includes(id)}
+                          onChange={() => toggleSelectDiscount(id)}
+                        />
+                        <div className="flex-1">
+                          <div className="text-[#303030] text-sm font-medium">{d.code || '—'}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700">{d.type || 'percentage'}</span>
+                            <span className="text-gray-600">{typeof d.amount === 'number' ? d.amount : '—'}</span>
+                            <span className="px-2 py-0.5 rounded bg-green-100 text-green-700">{d.status || 'Active'}</span>
+                            <span className="text-gray-500">{d.startsAt ? new Date(d.startsAt).toLocaleDateString() : '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <button className="h-8 px-3 rounded bg-white border border-red-300 text-red-700 text-xs" onClick={()=>handleDeleteDiscount(d)}>Delete</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full">
                 <thead>
                   <tr className="text-left text-sm text-gray-600 border-b">

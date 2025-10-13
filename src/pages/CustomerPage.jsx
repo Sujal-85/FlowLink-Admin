@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Helmet } from 'react-helmet'
 import LayoutWrapper from '../components/LayoutWrapper'
 import AddCustomerModal from '../components/AddCustomerModal'
 import FilterTabs from '../components/FilterTabs'
-import { listCustomers, deleteCustomer } from '../services/db'
+import { listCustomers, deleteCustomer, exportCustomersCsv, importCustomersCsv, provisionCustomerLogin, updateCustomerPortal } from '../services/db'
 
 const CustomerPage = () => {
   const [isLoading, setIsLoading] = useState(true)
@@ -13,15 +14,42 @@ const CustomerPage = () => {
   const [showSuccess, setShowSuccess] = useState(false)
   const [lastCustomerName, setLastCustomerName] = useState('')
   const [selectedCustomerIds, setSelectedCustomerIds] = useState([])
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [working, setWorking] = useState(false)
+  const [importSummary, setImportSummary] = useState(null)
+  const fileInputRef = React.useRef(null)
+  // Credentials modal state for Provision Login
+  const [creds, setCreds] = useState(null) // { portalId, email, password }
+  const [showCredsModal, setShowCredsModal] = useState(false)
+  const [showPwd, setShowPwd] = useState(false)
+  const [copiedField, setCopiedField] = useState('')
+  const [showPwdRow, setShowPwdRow] = useState({}) // map of customerId -> boolean
+
+  const copyToClipboard = async (label, value) => {
+    try { await navigator.clipboard.writeText(String(value || '')); setCopiedField(label); setTimeout(()=>setCopiedField(''), 1200) } catch {}
+  }
 
   useEffect(() => {
     // Simulate loading time for content
     const timer = setTimeout(() => {
       setIsLoading(false)
     }, 1000)
-    
     return () => clearTimeout(timer)
   }, [])
+
+  // Default show passwords for any rows that have a stored temp password
+  useEffect(() => {
+    if (!Array.isArray(customers) || customers.length === 0) return
+    setShowPwdRow(prev => {
+      const next = { ...prev }
+      for (const c of customers) {
+        const id = c.id || c._id
+        if (!id) continue
+        if (c.portalTempPassword && !(id in next)) next[id] = true
+      }
+      return next
+    })
+  }, [customers])
 
   // Load customers when filter changes
   useEffect(() => {
@@ -43,6 +71,115 @@ const CustomerPage = () => {
     const allIds = customers.map(c => c.id || c._id).filter(Boolean)
     const allSelected = allIds.length > 0 && selectedCustomerIds.length === allIds.length
     setSelectedCustomerIds(allSelected ? [] : allIds)
+  }
+
+const handleAdded = (c) => {
+    const name = [c?.firstName, c?.lastName].filter(Boolean).join(' ') || 'Customer'
+    setLastCustomerName(name)
+    setShowSuccess(true)
+    setShowAddCustomer(false)
+    setTimeout(() => setShowSuccess(false), 3000)
+}
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setShowSuccess(false) }
+    if (showSuccess) {
+      document.addEventListener('keydown', onKey)
+      return () => document.removeEventListener('keydown', onKey)
+    }
+  }, [showSuccess])
+
+  const handleProvisionLogin = async (c) => {
+    try {
+      const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Customer'
+      let email = c.email || ''
+      if (!email) {
+        email = window.prompt(`Enter email for ${name}`) || ''
+        if (!email) return
+      }
+      const pwd = Math.random().toString(36).slice(-8)
+      const result = await provisionCustomerLogin({ name, email, password: pwd })
+      const portalId = result?.user?.id || '—'
+      setCreds({ portalId, email, password: pwd })
+      setShowCredsModal(true)
+      // Persist to admin server so password is visible in list
+      try {
+        const cid = c.id || c._id
+        if (cid) {
+          await updateCustomerPortal(cid, { email, password: pwd })
+          // Update local list
+          setCustomers(prev => prev.map(x => {
+            const xid = x.id || x._id
+            return xid === cid ? { ...x, portalEmail: email, portalTempPassword: pwd } : x
+          }))
+        }
+      } catch (e) {
+        console.warn('Persist portal creds failed:', e)
+        // Still update local list so user can copy password immediately
+        const cid = c.id || c._id
+        if (cid) {
+          setCustomers(prev => prev.map(x => {
+            const xid = x.id || x._id
+            return xid === cid ? { ...x, portalEmail: email, portalTempPassword: pwd } : x
+          }))
+        }
+      }
+    } catch (e) {
+      alert(`Failed to provision login\n\n${e?.message || e}`)
+    }
+  }
+
+  // Import/Export helpers
+  const openImportModal = () => setShowImportModal(true)
+  const closeImportModal = () => { setShowImportModal(false); setImportSummary(null); setWorking(false) }
+  const triggerCustomerFilePicker = () => fileInputRef.current && fileInputRef.current.click()
+  const onCustomerFilePicked = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    try {
+      setWorking(true)
+      const result = await importCustomersCsv(file)
+      setImportSummary(result)
+      // refresh list
+      const items = await listCustomers({ status: selectedStatus })
+      setCustomers(Array.isArray(items) ? items : [])
+    } catch (err) {
+      alert(`Import failed\n\n${err?.message || err}`)
+    } finally {
+      setWorking(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+  const handleExportCustomers = async () => {
+    try {
+      setWorking(true)
+      const blob = await exportCustomersCsv()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `customers-${new Date().toISOString().slice(0,10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert(`Export failed\n\n${err?.message || err}`)
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const handleDeleteCustomer = async (c) => {
+    const cid = c.id || c._id
+    if (!cid) return
+    const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'customer'
+    if (!window.confirm(`Delete "${name}"? This action cannot be undone.`)) return
+    try {
+      await deleteCustomer(cid)
+      const items = await listCustomers({ status: selectedStatus })
+      setCustomers(Array.isArray(items) ? items : [])
+    } catch (e) {
+      alert(`Failed to delete customer\n\n${e?.message || e}`)
+    }
   }
 
   const handleBulkDeleteCustomers = async () => {
@@ -68,49 +205,50 @@ const CustomerPage = () => {
     setShowAddCustomer(false)
   }
 
-  const handleAdded = (c) => {
-    const name = [c?.firstName, c?.lastName].filter(Boolean).join(' ') || 'Customer'
-    setLastCustomerName(name)
-    setShowSuccess(true)
-    setShowAddCustomer(false)
-    setTimeout(() => setShowSuccess(false), 3000)
-  }
-
-  const handleDeleteCustomer = async (c) => {
-    const cid = c.id || c._id
-    if (!cid) return
-    const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'customer'
-    if (!window.confirm(`Delete "${name}"? This action cannot be undone.`)) return
-    try {
-      await deleteCustomer(cid)
-      const items = await listCustomers({ status: selectedStatus })
-      setCustomers(Array.isArray(items) ? items : [])
-    } catch (e) {
-      alert(`Failed to delete customer\n\n${e?.message || e}`)
-    }
-  }
-
   // Show Add Customer as full page like Add Product
   if (showAddCustomer) {
     return <AddCustomerModal onClose={handleCloseModal} onAdded={handleAdded} />
   }
 
   return (
+    <>
     <LayoutWrapper isLoading={isLoading}>
             <div>
-        {showSuccess && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center">
-              <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-600">
-                  <path d="M20 6L9 17l-5-5"></path>
-                </svg>
-              </div>
-              <div className="text-sm font-medium text-emerald-800">{lastCustomerName} added successfully</div>
-              <button className="mt-2 text-xs text-emerald-700 underline" onClick={()=>setShowSuccess(false)}>Dismiss</button>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              className="fixed inset-0 flex items-center justify-center z-[9999]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {/* Backdrop */}
+              <motion.div
+                className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+                onClick={() => setShowSuccess(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              {/* Card */}
+              <motion.div
+                className="relative z-10 bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center"
+                initial={{ scale: 0.96, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.96, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              >
+                <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-600">
+                    <path d="M20 6L9 17l-5-5"></path>
+                  </svg>
+                </div>
+                <div className="text-sm font-medium text-emerald-800">{lastCustomerName} added successfully</div>
+                <button className="mt-2 text-xs text-emerald-700 underline" onClick={()=>setShowSuccess(false)}>Dismiss</button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <Helmet>
           <title>Customers - FlowLink</title>
           <meta property="og:title" content="Customers - FlowLink" />
@@ -138,13 +276,12 @@ const CustomerPage = () => {
                 <p className="text-sm text-gray-600 mt-1">
                   Manage customer details, see customer order history, and group customers into segments.
                 </p>
-                <div className="mt-4 flex items-center gap-3">
+                <div className="mt-4 flex items-center gap-3 flex-wrap">
                   <button className="h-9 px-3 bg-brand-green text-white rounded-lg text-sm" onClick={handleAddCustomer}>
                     Add customer
                   </button>
-                  <button className="h-9 px-3 bg-white border border-gray-300 rounded-lg text-sm">
-                    Import customers
-                  </button>
+                  <button className="h-9 px-3 bg-white border border-gray-300 rounded-lg text-sm" onClick={handleExportCustomers}>Export customers</button>
+                  <button className="h-9 px-3 bg-white border border-gray-300 rounded-lg text-sm" onClick={openImportModal}>Import customers</button>
                 </div>
               </div>
               <div className="flex items-center justify-center">
@@ -188,7 +325,68 @@ const CustomerPage = () => {
                 <button className="h-8 px-3 rounded bg-white border border-red-300 text-red-700 text-xs" onClick={handleBulkDeleteCustomers}>Delete selected</button>
               </div>
             )}
-            <div className="overflow-x-auto">
+            {/* Mobile cards */}
+            <div className="md:hidden">
+              <div className="mb-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={customers.length > 0 && selectedCustomerIds.length === customers.map(c=>c.id || c._id).filter(Boolean).length}
+                  onChange={toggleSelectAllCustomers}
+                />
+                <span className="text-sm text-gray-600">Select all</span>
+              </div>
+              <div className="divide-y">
+                {customers.map((c, i) => {
+                  const id = c.id || c._id
+                  const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—'
+                  const emailOrPhone = c.email || c.phoneNumber || '—'
+                  return (
+                    <div key={id || i} className="py-3">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={selectedCustomerIds.includes(id)}
+                          onChange={() => toggleSelectCustomer(id)}
+                        />
+                        <div className="flex-1">
+                          <div className="text-[#303030] text-sm font-medium">{name}</div>
+                          <div className="text-xs text-gray-600">{emailOrPhone}</div>
+                          <div className="mt-1">
+                            <span className="inline-block px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs">{c.status || 'Active'}</span>
+                          </div>
+                          {c.portalTempPassword && (
+                            <div className="mt-2">
+                              <label className="block text-[11px] text-gray-600 mb-1">Portal password</label>
+                              <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                  <input readOnly type={showPwdRow[id] ? 'text' : 'password'} value={c.portalTempPassword} className="w-full h-8 px-3 pr-9 rounded border border-gray-300 text-xs bg-gray-50" />
+                                  <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded hover:bg-gray-100 flex items-center justify-center" onClick={() => setShowPwdRow(prev => ({ ...prev, [id]: !prev[id] }))} aria-label={showPwdRow[id] ? 'Hide' : 'Show'}>
+                                    {showPwdRow[id] ? (
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.36 1.43-2.64 2.5-3.76M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12M3 3l18 18"/></svg>
+                                    ) : (
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    )}
+                                  </button>
+                                </div>
+                                <button type="button" className="h-8 px-2 rounded border text-xs" onClick={() => copyToClipboard('pwd', c.portalTempPassword)}>{copiedField === 'pwd' ? 'Copied' : 'Copy'}</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <button className="h-8 px-3 rounded bg-white border border-gray-300 text-gray-800 text-xs" onClick={()=>handleProvisionLogin(c)}>Provision login</button>
+                        <button className="h-8 px-3 rounded bg-white border border-red-300 text-red-700 text-xs" onClick={()=>handleDeleteCustomer(c)}>Delete</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full">
                 <thead>
                   <tr className="text-left text-sm text-gray-600 border-b">
@@ -203,6 +401,7 @@ const CustomerPage = () => {
                     <th className="py-2">Email</th>
                     <th className="py-2">Phone</th>
                     <th className="py-2">Status</th>
+                    <th className="py-2">Password</th>
                     <th className="py-2">Actions</th>
                   </tr>
                 </thead>
@@ -220,8 +419,30 @@ const CustomerPage = () => {
                       <td className="py-3">{c.email || '—'}</td>
                       <td className="py-3">{c.phoneNumber || '—'}</td>
                       <td className="py-3"><span className="inline-block px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs">{c.status || 'Active'}</span></td>
+                      <td className="py-3 align-top">
+                        {c.portalTempPassword ? (
+                          <div className="flex items-center gap-2 min-w-[220px]">
+                            <div className="relative flex-1">
+                              <input readOnly type={showPwdRow[(c.id || c._id)] ? 'text' : 'password'} value={c.portalTempPassword} className="w-full h-8 px-3 pr-9 rounded border border-gray-300 text-xs bg-gray-50" />
+                              <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded hover:bg-gray-100 flex items-center justify-center" onClick={() => setShowPwdRow(prev => ({ ...prev, [c.id || c._id]: !prev[(c.id || c._id)] }))} aria-label={showPwdRow[(c.id || c._id)] ? 'Hide' : 'Show'}>
+                                {showPwdRow[(c.id || c._id)] ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.36 1.43-2.64 2.5-3.76M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12M3 3l18 18"/></svg>
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                )}
+                              </button>
+                            </div>
+                            <button type="button" className="h-8 px-2 rounded border text-xs" onClick={() => copyToClipboard('pwd', c.portalTempPassword)}>{copiedField === 'pwd' ? 'Copied' : 'Copy'}</button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
                       <td className="py-3">
-                        <button className="h-8 px-3 rounded bg-white border border-red-300 text-red-700 text-xs" onClick={()=>handleDeleteCustomer(c)}>Delete</button>
+                        <div className="flex items-center gap-2">
+                          <button className="h-8 px-3 rounded bg-white border border-gray-300 text-gray-800 text-xs" onClick={()=>handleProvisionLogin(c)}>Provision login</button>
+                          <button className="h-8 px-3 rounded bg-white border border-red-300 text-red-700 text-xs" onClick={()=>handleDeleteCustomer(c)}>Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -231,6 +452,63 @@ const CustomerPage = () => {
           </div>
         )}
 
+        {/* Import/Export Modal for Customers */}
+        <AnimatePresence>
+          {showImportModal && (
+            <motion.div
+              className="fixed inset-0 z-[9999] flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+                onClick={closeImportModal}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              <motion.div
+                className="relative bg-white rounded-xl shadow-2xl w-[92vw] max-w-[560px] p-5"
+                initial={{ y: 24, opacity: 0, scale: 0.98 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 24, opacity: 0, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-base font-semibold text-[#303030]">Import/Export Customers</div>
+                  <button className="w-8 h-8 rounded-lg hover:bg-gray-100" onClick={closeImportModal}>✕</button>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">Use the sample CSV to format your customers. You can bulk import or export your customers as CSV (Excel compatible).</p>
+                <a className="inline-flex items-center gap-2 text-brand-green text-sm underline mb-4" href="/sample-customers.csv" target="_blank" rel="noreferrer">Download sample CSV</a>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button className="h-10 px-3 rounded-lg bg-white border border-gray-300 text-sm" onClick={handleExportCustomers} disabled={working}>
+                    {working ? 'Preparing…' : 'Export CSV'}
+                  </button>
+                  <button className="h-10 px-3 rounded-lg bg-brand-green text-white text-sm" onClick={triggerCustomerFilePicker} disabled={working}>
+                    {working ? 'Uploading…' : 'Import from CSV'}
+                  </button>
+                  <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={onCustomerFilePicked} />
+                </div>
+                {importSummary && (
+                  <div className="mt-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50">
+                    <div className="text-sm text-emerald-800 font-medium">Import completed</div>
+                    <div className="text-xs text-emerald-700 mt-1">Created: {importSummary.created} · Failed: {importSummary.failed}</div>
+                    {Array.isArray(importSummary.failures) && importSummary.failures.length > 0 && (
+                      <div className="mt-2 max-h-28 overflow-auto text-xs text-emerald-700">
+                        {importSummary.failures.slice(0, 5).map((f, i) => (
+                          <div key={i}>Row {f.row}: {f.error}</div>
+                        ))}
+                        {importSummary.failures.length > 5 && <div>… and {importSummary.failures.length - 5} more</div>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="py-4 text-center text-sm text-gray-600">
           <span>
             Learn more about <a href="#" className="text-brand-green hover:underline">customers</a>
@@ -238,6 +516,62 @@ const CustomerPage = () => {
         </div>
       </div>
     </LayoutWrapper>
+
+    {/* Credentials Modal for Provision Login */}
+    {showCredsModal && creds && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => { setShowCredsModal(false); setCreds(null); setShowPwd(false) }} />
+        <div className="relative bg-white rounded-xl shadow-2xl w-[92vw] max-w-[560px] p-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-base font-semibold text-[#303030]">Customer Login Credentials</div>
+            <button className="w-8 h-8 rounded-lg hover:bg-gray-100" onClick={() => { setShowCredsModal(false); setCreds(null); setShowPwd(false) }}>✕</button>
+          </div>
+          <p className="text-xs text-gray-600 mb-4">Share these credentials with the customer. Password is hidden by default; click the eye icon to reveal.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Customer ID</label>
+              <div className="flex items-center gap-2">
+                <input readOnly value={creds.portalId || ''} className="flex-1 h-9 px-3 rounded border border-gray-300 text-sm bg-gray-50" />
+                <button type="button" className="h-9 px-3 rounded border text-sm" onClick={() => copyToClipboard('id', creds.portalId)}>
+                  {copiedField === 'id' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Email</label>
+              <div className="flex items-center gap-2">
+                <input readOnly value={creds.email || ''} className="flex-1 h-9 px-3 rounded border border-gray-300 text-sm bg-gray-50" />
+                <button type="button" className="h-9 px-3 rounded border text-sm" onClick={() => copyToClipboard('email', creds.email)}>
+                  {copiedField === 'email' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Password</label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input readOnly type={showPwd ? 'text' : 'password'} value={creds.password || ''} className="w-full h-9 px-3 pr-10 rounded border border-gray-300 text-sm bg-gray-50" />
+                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded hover:bg-gray-100 flex items-center justify-center" onClick={() => setShowPwd(v => !v)} aria-label={showPwd ? 'Hide' : 'Show'}>
+                    {showPwd ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.36 1.43-2.64 2.5-3.76M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12M3 3l18 18"/></svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
+                <button type="button" className="h-9 px-3 rounded border text-sm" onClick={() => copyToClipboard('pwd', creds.password)}>
+                  {copiedField === 'pwd' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button className="h-9 px-4 rounded border" onClick={() => { setShowCredsModal(false); setCreds(null); setShowPwd(false) }}>Done</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
