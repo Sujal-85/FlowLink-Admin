@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet'
 import LayoutWrapper from '../components/LayoutWrapper'
 import AddCustomerModal from '../components/AddCustomerModal'
 import FilterTabs from '../components/FilterTabs'
-import { listCustomers, deleteCustomer, exportCustomersCsv, importCustomersCsv, provisionCustomerLogin } from '../services/db'
+import { listCustomers, deleteCustomer, exportCustomersCsv, importCustomersCsv, provisionCustomerLogin, updateCustomerPortal } from '../services/db'
 
 const CustomerPage = () => {
   const [isLoading, setIsLoading] = useState(true)
@@ -18,6 +18,16 @@ const CustomerPage = () => {
   const [working, setWorking] = useState(false)
   const [importSummary, setImportSummary] = useState(null)
   const fileInputRef = React.useRef(null)
+  // Credentials modal state for Provision Login
+  const [creds, setCreds] = useState(null) // { portalId, email, password }
+  const [showCredsModal, setShowCredsModal] = useState(false)
+  const [showPwd, setShowPwd] = useState(false)
+  const [copiedField, setCopiedField] = useState('')
+  const [showPwdRow, setShowPwdRow] = useState({}) // map of customerId -> boolean
+
+  const copyToClipboard = async (label, value) => {
+    try { await navigator.clipboard.writeText(String(value || '')); setCopiedField(label); setTimeout(()=>setCopiedField(''), 1200) } catch {}
+  }
 
   useEffect(() => {
     // Simulate loading time for content
@@ -26,6 +36,20 @@ const CustomerPage = () => {
     }, 1000)
     return () => clearTimeout(timer)
   }, [])
+
+  // Default show passwords for any rows that have a stored temp password
+  useEffect(() => {
+    if (!Array.isArray(customers) || customers.length === 0) return
+    setShowPwdRow(prev => {
+      const next = { ...prev }
+      for (const c of customers) {
+        const id = c.id || c._id
+        if (!id) continue
+        if (c.portalTempPassword && !(id in next)) next[id] = true
+      }
+      return next
+    })
+  }, [customers])
 
   // Load customers when filter changes
   useEffect(() => {
@@ -73,8 +97,32 @@ const handleAdded = (c) => {
         if (!email) return
       }
       const pwd = Math.random().toString(36).slice(-8)
-      await provisionCustomerLogin({ name, email, password: pwd })
-      alert(`Login provisioned for ${name}\nEmail: ${email}\nPassword: ${pwd}`)
+      const result = await provisionCustomerLogin({ name, email, password: pwd })
+      const portalId = result?.user?.id || '—'
+      setCreds({ portalId, email, password: pwd })
+      setShowCredsModal(true)
+      // Persist to admin server so password is visible in list
+      try {
+        const cid = c.id || c._id
+        if (cid) {
+          await updateCustomerPortal(cid, { email, password: pwd })
+          // Update local list
+          setCustomers(prev => prev.map(x => {
+            const xid = x.id || x._id
+            return xid === cid ? { ...x, portalEmail: email, portalTempPassword: pwd } : x
+          }))
+        }
+      } catch (e) {
+        console.warn('Persist portal creds failed:', e)
+        // Still update local list so user can copy password immediately
+        const cid = c.id || c._id
+        if (cid) {
+          setCustomers(prev => prev.map(x => {
+            const xid = x.id || x._id
+            return xid === cid ? { ...x, portalEmail: email, portalTempPassword: pwd } : x
+          }))
+        }
+      }
     } catch (e) {
       alert(`Failed to provision login\n\n${e?.message || e}`)
     }
@@ -163,6 +211,7 @@ const handleAdded = (c) => {
   }
 
   return (
+    <>
     <LayoutWrapper isLoading={isLoading}>
             <div>
         <AnimatePresence>
@@ -173,8 +222,17 @@ const handleAdded = (c) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
+              {/* Backdrop */}
               <motion.div
-                className="bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center"
+                className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+                onClick={() => setShowSuccess(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              {/* Card */}
+              <motion.div
+                className="relative z-10 bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center"
                 initial={{ scale: 0.96, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.96, opacity: 0 }}
@@ -297,6 +355,24 @@ const handleAdded = (c) => {
                           <div className="mt-1">
                             <span className="inline-block px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs">{c.status || 'Active'}</span>
                           </div>
+                          {c.portalTempPassword && (
+                            <div className="mt-2">
+                              <label className="block text-[11px] text-gray-600 mb-1">Portal password</label>
+                              <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                  <input readOnly type={showPwdRow[id] ? 'text' : 'password'} value={c.portalTempPassword} className="w-full h-8 px-3 pr-9 rounded border border-gray-300 text-xs bg-gray-50" />
+                                  <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded hover:bg-gray-100 flex items-center justify-center" onClick={() => setShowPwdRow(prev => ({ ...prev, [id]: !prev[id] }))} aria-label={showPwdRow[id] ? 'Hide' : 'Show'}>
+                                    {showPwdRow[id] ? (
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.36 1.43-2.64 2.5-3.76M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12M3 3l18 18"/></svg>
+                                    ) : (
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    )}
+                                  </button>
+                                </div>
+                                <button type="button" className="h-8 px-2 rounded border text-xs" onClick={() => copyToClipboard('pwd', c.portalTempPassword)}>{copiedField === 'pwd' ? 'Copied' : 'Copy'}</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="mt-2 flex justify-end gap-2">
@@ -325,6 +401,7 @@ const handleAdded = (c) => {
                     <th className="py-2">Email</th>
                     <th className="py-2">Phone</th>
                     <th className="py-2">Status</th>
+                    <th className="py-2">Password</th>
                     <th className="py-2">Actions</th>
                   </tr>
                 </thead>
@@ -342,6 +419,25 @@ const handleAdded = (c) => {
                       <td className="py-3">{c.email || '—'}</td>
                       <td className="py-3">{c.phoneNumber || '—'}</td>
                       <td className="py-3"><span className="inline-block px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs">{c.status || 'Active'}</span></td>
+                      <td className="py-3 align-top">
+                        {c.portalTempPassword ? (
+                          <div className="flex items-center gap-2 min-w-[220px]">
+                            <div className="relative flex-1">
+                              <input readOnly type={showPwdRow[(c.id || c._id)] ? 'text' : 'password'} value={c.portalTempPassword} className="w-full h-8 px-3 pr-9 rounded border border-gray-300 text-xs bg-gray-50" />
+                              <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded hover:bg-gray-100 flex items-center justify-center" onClick={() => setShowPwdRow(prev => ({ ...prev, [c.id || c._id]: !prev[(c.id || c._id)] }))} aria-label={showPwdRow[(c.id || c._id)] ? 'Hide' : 'Show'}>
+                                {showPwdRow[(c.id || c._id)] ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.36 1.43-2.64 2.5-3.76M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12M3 3l18 18"/></svg>
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                )}
+                              </button>
+                            </div>
+                            <button type="button" className="h-8 px-2 rounded border text-xs" onClick={() => copyToClipboard('pwd', c.portalTempPassword)}>{copiedField === 'pwd' ? 'Copied' : 'Copy'}</button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
                       <td className="py-3">
                         <div className="flex items-center gap-2">
                           <button className="h-8 px-3 rounded bg-white border border-gray-300 text-gray-800 text-xs" onClick={()=>handleProvisionLogin(c)}>Provision login</button>
@@ -420,6 +516,62 @@ const handleAdded = (c) => {
         </div>
       </div>
     </LayoutWrapper>
+
+    {/* Credentials Modal for Provision Login */}
+    {showCredsModal && creds && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => { setShowCredsModal(false); setCreds(null); setShowPwd(false) }} />
+        <div className="relative bg-white rounded-xl shadow-2xl w-[92vw] max-w-[560px] p-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-base font-semibold text-[#303030]">Customer Login Credentials</div>
+            <button className="w-8 h-8 rounded-lg hover:bg-gray-100" onClick={() => { setShowCredsModal(false); setCreds(null); setShowPwd(false) }}>✕</button>
+          </div>
+          <p className="text-xs text-gray-600 mb-4">Share these credentials with the customer. Password is hidden by default; click the eye icon to reveal.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Customer ID</label>
+              <div className="flex items-center gap-2">
+                <input readOnly value={creds.portalId || ''} className="flex-1 h-9 px-3 rounded border border-gray-300 text-sm bg-gray-50" />
+                <button type="button" className="h-9 px-3 rounded border text-sm" onClick={() => copyToClipboard('id', creds.portalId)}>
+                  {copiedField === 'id' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Email</label>
+              <div className="flex items-center gap-2">
+                <input readOnly value={creds.email || ''} className="flex-1 h-9 px-3 rounded border border-gray-300 text-sm bg-gray-50" />
+                <button type="button" className="h-9 px-3 rounded border text-sm" onClick={() => copyToClipboard('email', creds.email)}>
+                  {copiedField === 'email' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Password</label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input readOnly type={showPwd ? 'text' : 'password'} value={creds.password || ''} className="w-full h-9 px-3 pr-10 rounded border border-gray-300 text-sm bg-gray-50" />
+                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded hover:bg-gray-100 flex items-center justify-center" onClick={() => setShowPwd(v => !v)} aria-label={showPwd ? 'Hide' : 'Show'}>
+                    {showPwd ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.36 1.43-2.64 2.5-3.76M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12M3 3l18 18"/></svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
+                <button type="button" className="h-9 px-3 rounded border text-sm" onClick={() => copyToClipboard('pwd', creds.password)}>
+                  {copiedField === 'pwd' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button className="h-9 px-4 rounded border" onClick={() => { setShowCredsModal(false); setCreds(null); setShowPwd(false) }}>Done</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

@@ -7,6 +7,7 @@ import { useHistory, useLocation } from 'react-router-dom'
 import { listOffers, deleteOffer } from '../services/db'
 import { Lightbulb } from 'lucide-react'
 import SuccessModal from '../components/SuccessModal'
+import logo from "../assets/offer.png"
 
 const OffersPage = () => {
   const history = useHistory()
@@ -53,7 +54,7 @@ const OffersPage = () => {
   }
 
   return (
-    <LayoutWrapper isLoading={isLoading}>
+    <LayoutWrapper isLoading={isLoading} contentClassName="px-0 md:px-6 pt-2 md:pt-4 pb-2">
       <div className="w-full">
         <SuccessModal open={showSuccess} title={`${lastTitle} created successfully`} onClose={()=>setShowSuccess(false)} />
         <Helmet>
@@ -66,7 +67,7 @@ const OffersPage = () => {
             <div className="w-9 h-9 rounded-lg bg-[#1e1f22] text-white flex items-center justify-center"><Lightbulb size={18} /></div>
             <h1 className="text-[#303030] text-[28px] font-bold font-manrope m-0">Offers</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-2">
             <button className="h-9 px-3 rounded-lg bg-[#1a1a1a] text-white text-sm" onClick={()=>history.push('/offers/new')}>Create offer</button>
           </div>
         </div>
@@ -77,7 +78,9 @@ const OffersPage = () => {
         {/* Center card when empty */}
         {offers.length === 0 && (
           <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-            <div className="text-sm text-gray-600">No offers yet. Create your first offer to highlight promotions in your store.</div>
+            <img src={logo} alt="Create offer" className="mx-auto w-full max-w-[300px] h-48 object-contain" />
+            <div className="text-sm py-4 text-gray-600">No offers yet. Create your first offer to highlight promotions in your store.</div>
+            
             <button className="mt-3 h-9 px-3 rounded-lg bg-[#1a1a1a] text-white text-sm" onClick={()=>history.push('/offers/new')}>Create offer</button>
           </div>
         )}

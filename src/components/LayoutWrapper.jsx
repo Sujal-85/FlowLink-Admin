@@ -4,7 +4,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import ChatbotDrawer from './ChatbotDrawer'
 
-const LayoutWrapper = ({ children, isLoading = false, customHeader = null }) => {
+const LayoutWrapper = ({ children, isLoading = false, customHeader = null, contentClassName = 'px-3 md:px-6 pt-2 md:pt-4 pb-2' }) => {
   const [showChat, setShowChat] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -38,7 +38,7 @@ const LayoutWrapper = ({ children, isLoading = false, customHeader = null }) => 
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="px-3 md:px-6 pt-2 md:pt-4 pb-2">
+              <div className={contentClassName}>
                 {children}
               </div>
             </motion.div>

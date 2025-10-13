@@ -266,8 +266,16 @@ const Page1 = (props) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
+              {/* Backdrop */}
               <motion.div
-                className="bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center"
+                className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+                onClick={() => setShowSuccess(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              <motion.div
+                className="relative z-10 bg-white rounded-xl shadow-xl border border-emerald-200 px-5 py-4 text-center"
                 initial={{ scale: 0.96, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.96, opacity: 0 }}

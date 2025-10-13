@@ -219,14 +219,15 @@ const AddProduct = ({ onProductAdded }) => {
       <LayoutWrapper 
         isLoading={isLoading} 
         customHeader={<ProductHeader onDiscard={handleDiscard} onSave={handleSave} />}
+        contentClassName="px-0 md:px-6 pt-2 md:pt-4 pb-2"
       >
-        <div className="flex-1 p-6 bg-[#f1f1f1] overflow-y-auto">
+        <div className="flex-1 px-0 py-3 md:p-6 bg-[#f1f1f1] overflow-y-auto">
           <div className="mb-6">
             <h1 className="text-[#303030] text-[28px] font-bold font-manrope m-0">Add product</h1>
           </div>
 
           {/* Grocery details */}
-          <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
             <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Grocery details</label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
@@ -262,7 +263,7 @@ const AddProduct = ({ onProductAdded }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:[grid-template-columns:1fr_320px] gap-6 w-full">
+          <div className="grid grid-cols-1 md:[grid-template-columns:1fr_320px] gap-y-6 gap-x-8 md:gap-x-12 lg:gap-x-16 w-full">
             {/* Left Column */}
             <div className="flex flex-col gap-6">
               {/* Title and Description */}
@@ -514,7 +515,7 @@ const AddProduct = ({ onProductAdded }) => {
             </div>
 
             {/* Right Column */}
-            <div className="flex flex-col gap-6 order-last md:order-none">
+            <div className="flex flex-col gap-6 order-last md:order-none md:ml-8 lg:ml-12">
               {/* Status */}
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <label className="block text-[#303030] text-sm font-semibold font-manrope mb-3">Status</label>

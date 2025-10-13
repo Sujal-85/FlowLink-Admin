@@ -56,11 +56,11 @@ const AddDiscount = () => {
   };
 
   return (
-    <LayoutWrapper>
+    <LayoutWrapper contentClassName="px-0 md:px-6 pt-2 md:pt-4 pb-2">
       <LoaderOverlay open={isSaving} label="Saving discount…" />
-      <div className="p-6 min-h-screen font-sans">
+      <div className="px-0 py-3 md:p-6 min-h-screen font-sans">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-lg bg-[#1e1f22] text-white flex items-center justify-center"><Percent size={18} /></div>
             <h1 className="text-2xl font-semibold text-gray-800">Create discount</h1>

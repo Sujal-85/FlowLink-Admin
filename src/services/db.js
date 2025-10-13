@@ -316,6 +316,25 @@ export async function deleteCustomer(customerId) {
   return true
 }
 
+// Persist last provisioned portal credentials on the admin server
+export async function updateCustomerPortal(customerId, { email, password } = {}) {
+  const uid = currentUid()
+  if (!customerId) throw new Error('customerId required')
+  if (!useLocalApi) return { ok: true } // Firestore mode: skip
+  if (!uid) throw new Error('Not authenticated')
+  const res = await fetch(`${apiBase}/api/customers/${encodeURIComponent(customerId)}/portal`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': uid },
+    body: JSON.stringify({ email, password })
+  })
+  if (!res.ok) {
+    let msg
+    try { const j = await res.json(); msg = j?.error || JSON.stringify(j) } catch { msg = await res.text() }
+    throw new Error(msg || 'Failed to update portal credentials')
+  }
+  return await res.json()
+}
+
 // Customers CSV export/import
 export async function exportCustomersCsv() {
   const uid = currentUid()
@@ -602,11 +621,20 @@ export async function provisionCustomerLogin({ name, email, password, shop } = {
   const uid = currentUid()
   if (!email) throw new Error('email required')
   const body = { name: name || '', email, password: password || '', shop }
-  const res = await fetch(`${customerApiBase}/auth/register`, {
+  // Prefer provision endpoint (upsert)
+  let res = await fetch(`${customerApiBase}/auth/provision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(uid ? { 'x-user-id': uid } : {}) },
     body: JSON.stringify(body)
   })
+  // Fallback for older servers that may not have /auth/provision
+  if (res.status === 404) {
+    res = await fetch(`${customerApiBase}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(uid ? { 'x-user-id': uid } : {}) },
+      body: JSON.stringify(body)
+    })
+  }
   if (!res.ok) {
     let msg
     try { const j = await res.json(); msg = j?.error || JSON.stringify(j) } catch { msg = await res.text() }

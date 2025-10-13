@@ -32,7 +32,11 @@ const customerSchema = new mongoose.Schema({
   notes: String,
   tags: String,
   status: { type: String, default: 'Active' },
-  addresses: { type: [addressSchema], default: [] }
+  addresses: { type: [addressSchema], default: [] },
+  // Admin-only portal preview fields (store last provisioned values)
+  portalEmail: String,
+  portalTempPassword: String,
+  portalUpdatedAt: Date
 }, { timestamps: true })
 
 const Customer = mongoose.model('Customer', customerSchema)
@@ -209,6 +213,24 @@ router.get('/', async (req, res) => {
   if (status && status !== 'All') filter.status = status
   const docs = await Customer.find(filter).sort({ createdAt: -1 }).lean()
   res.json(docs)
+})
+
+// Update portal credentials (admin convenience only)
+router.patch('/:id/portal', async (req, res) => {
+  try {
+    const { id } = req.params
+    const userId = req.get('x-user-id')
+    if (!userId) return res.status(401).json({ error: 'Missing user id' })
+    const { email, password } = req.body || {}
+    const update = { portalUpdatedAt: new Date() }
+    if (typeof email === 'string') update.portalEmail = email
+    if (typeof password === 'string') update.portalTempPassword = password
+    const doc = await Customer.findOneAndUpdate({ _id: id, userId }, { $set: update }, { new: true })
+    if (!doc) return res.status(404).json({ error: 'Not found' })
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 
 router.delete('/:id', async (req, res) => {

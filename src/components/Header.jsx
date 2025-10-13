@@ -55,7 +55,7 @@ const Header = ({ onToggleChat = () => {}, onToggleMobileMenu = () => {} }) => {
 
   return (
     <>
-      <LoaderOverlay open={isLoggingOut} label="Signing you out…" />
+      <LoaderOverlay open={isLoggingOut} label="Signing you out…" logoSrc="/flowlink-logo-black.png" />
       {/* Header */}
       <header className="bg-[#1a1a1a] h-[60px] flex items-center justify-between px-3 md:px-5 shadow w-full">
         <div className="flex items-center">

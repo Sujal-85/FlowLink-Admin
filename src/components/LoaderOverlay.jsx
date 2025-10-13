@@ -1,7 +1,7 @@
 import React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
-const LoaderOverlay = ({ open = false, label = 'Loading…' }) => {
+const LoaderOverlay = ({ open = false, label = 'Loading…', logoSrc }) => {
   return (
     <AnimatePresence>
       {open && (
@@ -24,6 +24,9 @@ const LoaderOverlay = ({ open = false, label = 'Loading…' }) => {
             exit={{ y: 12, opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
           >
+            {logoSrc && (
+              <img src={logoSrc} alt="FlowLink" className="h-6 object-contain" />
+            )}
             <div className="w-8 h-8 border-2 border-gray-300 border-t-[#1a1a1a] rounded-full animate-spin" />
             <div className="text-sm text-[#111827] font-medium">{label}</div>
           </motion.div>
