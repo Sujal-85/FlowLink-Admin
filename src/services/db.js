@@ -477,9 +477,7 @@ export async function upsertUserProfile(uid, profile) {
 
 // Profile photo upload
 export async function uploadProfilePhoto(uid, file) {
-  const storageRef = ref(storage, `profiles/${uid}-${Date.now()}-${file.name}`)
-  await uploadBytes(storageRef, file)
-  const url = await getDownloadURL(storageRef)
+  const url = await uploadPublicAsset(file, { folder: 'flowlink/profiles' })
   await upsertUserProfile(uid, { photoURL: url })
   return url
 }

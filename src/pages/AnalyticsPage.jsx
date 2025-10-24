@@ -1,7 +1,48 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
+import { auth } from '../services/firebase'
 import { Helmet } from 'react-helmet'
 import { BarChart3, Calendar, IndianRupee, Plus, Edit2, ExternalLink, MoreHorizontal } from 'lucide-react'
 import LayoutWrapper from '../components/LayoutWrapper'
+
+const formatINR = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
+const formatNum = (n) => new Intl.NumberFormat('en-IN').format(n)
+
+const RevenueChart = ({ series }) => {
+  const max = Math.max(1, ...series.map(s => s.revenue || 0))
+  const last = series.length ? series[series.length - 1] : null
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="text-sm font-semibold text-[#303030] mb-3">Total sales over time</div>
+      <div className="border border-gray-200 rounded-lg p-3">
+        <div className="flex items-center justify-between text-sm text-gray-700">
+          <div className="font-semibold">{last ? formatINR(last.revenue) : '₹0'}</div>
+          <div>Last 7 days</div>
+        </div>
+        <div className="my-6 h-40 flex items-end gap-2 px-2">
+          {series.map((p) => {
+            const h = Math.round(((p.revenue || 0) / max) * 100)
+            return (
+              <div key={p.date} className="flex-1 flex flex-col items-end justify-end">
+                <div className="w-full bg-gradient-to-t from-green-200 to-green-500 rounded" style={{ height: `${h}%` }} />
+              </div>
+            )
+          })}
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-[10px] text-gray-500">
+          {series.map((p) => (
+            <span key={p.date} className="text-center">
+              {new Date(p.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"/>{last ? new Date(last.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span>
+          <span className="flex-1" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const StatCard = ({ title, value, underline }) => {
   return (
@@ -74,11 +115,29 @@ const EmptyPanel = ({ title }) => (
 
 const AnalyticsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+  const load = useCallback(async () => {
+    setError(null)
+    setIsLoading(true)
+    try {
+      const uid = auth?.currentUser?.uid
+      if (!uid) throw new Error('Not signed in')
+      const res = await fetch(`/api/orders/analytics?days=7`, { headers: { Accept: 'application/json', 'x-user-id': uid } })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      setData(json)
+      setIsLoading(false)
+      return
+    } catch (e) {
+      setError(e?.message || 'Unable to load analytics data. Please ensure the server is running and you are signed in.')
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 400)
-    return () => clearTimeout(t)
-  }, [])
+    load()
+  }, [load])
 
   return (
     <LayoutWrapper isLoading={isLoading}>
@@ -113,16 +172,23 @@ const AnalyticsPage = () => {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 border border-red-200 flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={load} className="px-3 py-1 rounded bg-red-600 text-white text-sm">Retry</button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Gross sales" value="₹0" underline />
-          <StatCard title="Returning customer rate" value="0%" underline />
-          <StatCard title="Orders fulfilled" value="0" underline />
-          <StatCard title="Orders" value="0" underline />
+          <StatCard title="Gross sales" value={data ? formatINR(data.totals.revenue) : '—'} underline />
+          <StatCard title="Returning customer rate" value={data ? `${data.totals.conversionRate}%` : '—'} underline />
+          <StatCard title="Orders fulfilled" value={data ? formatNum(data.totals.orders) : '—'} underline />
+          <StatCard title="Orders" value={data ? formatNum(data.totals.orders) : '—'} underline />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
           <div>
-            <PlaceholderChart title="Total sales over time" />
+            {data ? <RevenueChart series={data.series} /> : (error ? <EmptyPanel title="Analytics unavailable" /> : <PlaceholderChart title="Total sales over time" />)}
           </div>
           <div>
             <ListPanel />

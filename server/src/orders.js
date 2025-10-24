@@ -388,3 +388,55 @@ router.post('/:id/deny', async (req, res) => {
 })
 
 export default router
+
+router.get('/analytics', async (req, res) => {
+  try {
+    const days = Math.max(1, Math.min(90, Number(req.query.days || 7)))
+    const userId = req.get('x-user-id')
+    if (!userId) return res.status(401).json({ error: 'Missing user id' })
+    const end = new Date()
+    const start = new Date(end)
+    start.setHours(0, 0, 0, 0)
+    start.setDate(start.getDate() - (days - 1))
+    const docs = await Order.find({ userId, createdAt: { $gte: start } }).sort({ createdAt: 1 }).lean()
+    const series = []
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      series.push({ date: d.toISOString().slice(0, 10), visitors: 0, orders: 0, revenue: 0 })
+    }
+    const custCount = new Map()
+    for (const o of docs) {
+      const key = String(o.customerId || (o.customerEmail || '').toLowerCase() || (o?.shippingAddress?.phone || ''))
+      if (key) custCount.set(key, (custCount.get(key) || 0) + 1)
+      const dt = new Date(o.createdAt)
+      const idx = Math.floor((dt - start) / (24 * 60 * 60 * 1000))
+      if (idx < 0 || idx >= days) continue
+      let amount = 0
+      if (o && o.payment) {
+        const p = o.payment
+        amount = Number(p.amount || p.totalPaid || o.amountPaid || o.total || o.subtotal || 0) || 0
+      }
+      if (!amount) {
+        let t = 0
+        for (const it of (o.items || [])) {
+          const q = Number(it?.quantity || 1)
+          const pr = Number(it?.price || 0)
+          if (!Number.isNaN(q) && !Number.isNaN(pr)) t += q * pr
+        }
+        amount = t || Number(o.totalPrice || 0) || 0
+      }
+      series[idx].orders += 1
+      series[idx].revenue = Number((series[idx].revenue + amount).toFixed(2))
+    }
+    const totals_orders = series.reduce((s, r) => s + r.orders, 0)
+    const totals_revenue = Number(series.reduce((s, r) => s + r.revenue, 0).toFixed(2))
+    const uniqueCustomers = Array.from(custCount.keys()).length
+    let returningOrders = 0
+    for (const v of custCount.values()) { if (v > 1) returningOrders += v - 1 }
+    const conversionRate = totals_orders ? Math.round((returningOrders / totals_orders) * 10000) / 100 : 0
+    res.json({ range: `last_${days}_days`, series, totals: { visitors: uniqueCustomers, orders: totals_orders, revenue: totals_revenue, conversionRate } })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})

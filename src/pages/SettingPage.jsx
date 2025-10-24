@@ -129,7 +129,27 @@ const Setting = () => {
     }
     try {
       setShopStatus({ loading: true, message: '' })
-      const shop = await upsertShop({ slug, name: shopForm.name || slug, description: shopForm.description, logo: shopForm.logo || undefined, cover: shopForm.cover || undefined })
+      // Pre-check: if nothing changed from existing, show 'Already saved' and skip update
+      let existing = null
+      try { existing = await getShop(slug) } catch (_) {}
+      const desired = {
+        name: shopForm.name || slug,
+        description: shopForm.description || '',
+        logo: (shopForm.logo || '').trim(),
+        cover: (shopForm.cover || '').trim()
+      }
+      if (existing) {
+        const same =
+          String(existing.name || '') === String(desired.name || '') &&
+          String(existing.description || '') === String(desired.description || '') &&
+          String(existing.logo || '') === String(desired.logo || '') &&
+          String(existing.cover || '') === String(desired.cover || '')
+        if (same) {
+          setShopStatus({ loading: false, message: '✅ Already saved for this slug' })
+          return
+        }
+      }
+      const shop = await upsertShop({ slug, name: desired.name, description: desired.description, logo: desired.logo || undefined, cover: desired.cover || undefined })
       // Update local form immediately
       setShopForm(f => ({ ...f, slug: shop.slug, name: shop.name }))
       // Persist to localStorage for future prefill
