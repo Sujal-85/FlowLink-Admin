@@ -42,23 +42,22 @@ const App = () => {
   return (
     <Router>
       <Switch>
-                        <Route component={SignupPage} exact path="/signup" />
-        <Route component={LoginPage} exact path="/login" />
-                <PrivateRoute component={FlowLinkHome} exact path="/home" />
-        <Redirect from="/" to="/home" exact />
-        <Route component={OnboardingPage} exact path="/onboarding" />
-        <Route component={AddProduct} exact path="/products" />
-        <Route component={OrderPage} exact path="/orders" />
-        <Route component={FinancesPage} exact path="/finances" />
-        <Route component={DiscountsPage} exact path="/discounts" />
-        <Route component={AddDiscount} exact path="/discounts/new" />
-        <Route component={OffersPage} exact path="/offers" />
-        <Route component={AddOfferPage} exact path="/offers/new" />
-        <Route component={AnalyticsPage} exact path="/analytics" />
-        <Route component={CustomerPage} exact path="/customers" />
-        <PrivateRoute component={Setting} exact path="/setting" />
-        <Route component={NotFound} path="**" />
-        <Redirect to="**" />
+        <Route path="/signup" exact component={SignupPage} />
+        <Route path="/login" exact component={LoginPage} />
+        <PrivateRoute path="/home" exact component={FlowLinkHome} />
+        <Route path="/onboarding" exact component={OnboardingPage} />
+        <Route path="/products" exact component={AddProduct} />
+        <Route path="/orders" exact component={OrderPage} />
+        <Route path="/finances" exact component={FinancesPage} />
+        <Route path="/discounts" exact component={DiscountsPage} />
+        <Route path="/discounts/new" exact component={AddDiscount} />
+        <Route path="/offers" exact component={OffersPage} />
+        <Route path="/offers/new" exact component={AddOfferPage} />
+        <Route path="/analytics" exact component={AnalyticsPage} />
+        <Route path="/customers" exact component={CustomerPage} />
+        <PrivateRoute path="/setting" exact component={Setting} />
+        <Route path="/" exact render={() => <Redirect to="/home" />} />
+        <Route path="**" component={NotFound} />
       </Switch>
     </Router>
   )

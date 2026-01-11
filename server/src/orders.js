@@ -1,5 +1,6 @@
 import express from 'express'
 import mongoose from 'mongoose'
+import { emitOrderStatusUpdate } from '../sockets/order-emitter.js'
 
 const router = express.Router()
 
@@ -353,6 +354,13 @@ router.patch('/:id/status', async (req, res) => {
     }
     const doc = await Order.findOneAndUpdate({ _id: id, userId }, { $set: update }, { new: true }).lean()
     if (!doc) return res.status(404).json({ error: 'Not found' })
+    
+    // Emit WebSocket event for real-time order status update to customer
+    if (status && doc.userId) {
+      // Emit order status update to customer via WebSocket
+      emitOrderStatusUpdate(id, doc.userId, status);
+    }
+    
     res.json({ ok: true, order: doc })
   } catch (e) {
     res.status(400).json({ error: e.message })
@@ -367,6 +375,12 @@ router.post('/:id/approve', async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Missing user id' })
     const doc = await Order.findOneAndUpdate({ _id: id, userId }, { $set: { status: 'Approved' } }, { new: true }).lean()
     if (!doc) return res.status(404).json({ error: 'Not found' })
+    
+    // Emit WebSocket event for real-time order status update to customer
+    if (doc.userId) {
+      emitOrderStatusUpdate(id, doc.userId, 'ORDER_CONFIRMED');
+    }
+    
     res.json({ ok: true, order: doc })
   } catch (e) {
     res.status(400).json({ error: e.message })
@@ -381,6 +395,12 @@ router.post('/:id/deny', async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Missing user id' })
     const doc = await Order.findOneAndUpdate({ _id: id, userId }, { $set: { status: 'Denied' } }, { new: true }).lean()
     if (!doc) return res.status(404).json({ error: 'Not found' })
+    
+    // Emit WebSocket event for real-time order status update to customer
+    if (doc.userId) {
+      emitOrderStatusUpdate(id, doc.userId, 'CANCELLED');
+    }
+    
     res.json({ ok: true, order: doc })
   } catch (e) {
     res.status(400).json({ error: e.message })

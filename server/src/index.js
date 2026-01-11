@@ -11,6 +11,8 @@ import customersRouter from './customers.js'
 import discountsRouter from './discounts.js'
 import ordersRouter from './orders.js'
 import offersRouter from './offers.js'
+import http from 'http'
+import { setupAdminSocket } from '../sockets/admin.socket.js'
 dotenv.config()
 
   // Configure Cloudinary (ensure env vars are set in server/.env)
@@ -22,6 +24,8 @@ dotenv.config()
   })
 
 const app = express()
+const server = http.createServer(app)
+
 app.use(cors())
 app.use(express.json())
 app.use(morgan('dev'))
@@ -342,7 +346,10 @@ app.get('/api/debug/products-with-images', async (req, res) => {
   }
 })
 
+// Setup admin WebSocket functionality
+const { io, userSocketMap, adminSocketMap } = setupAdminSocket(server)
+
 const port = process.env.PORT || 5000
-app.listen(port, () => console.log(`API listening on http://localhost:${port}`))
+server.listen(port, () => console.log(`API listening on http://localhost:${port}`))
 
 
